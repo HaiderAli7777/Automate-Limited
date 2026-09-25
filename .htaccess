@@ -1,8 +1,10 @@
-# Automate Limited - static site on Hostinger (LiteSpeed / Apache)
+# Automate Limited - Hostinger (LiteSpeed / Apache)
+# PHP pages: the homepage, /careers, /contact, /privacy, the team area at /admin
+# and the one-time installer at /install.
 
-DirectoryIndex index.html
+DirectoryIndex index.php index.html
 Options -Indexes
-ErrorDocument 404 /404.html
+ErrorDocument 404 /404.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -13,6 +15,27 @@ ErrorDocument 404 /404.html
   # one canonical host: send www to the bare domain
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+  # the old single-page site lived at /index.html
+  RewriteRule ^index\.html$ / [L,R=301]
+
+  # code, config, tooling and dotfiles (.git, .env) are never served
+  RewriteRule ^(app|tools)(/|$) - [F,L]
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+  RewriteRule \.(sql|md|log|lock|dist|sh)$ - [F,L]
+
+  # the sitemap lists live job postings, so it is generated
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+  # careers: /careers/odoo-developer -> careers/index.php?job=odoo-developer
+  RewriteRule ^careers/([a-z0-9-]+)/?$ careers/index.php?job=$1 [QSA,L]
+
+  # team area: every /admin address goes through its front controller
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^admin(/.*)?$ admin/index.php [QSA,L]
+
+  # friendly shortcut to the team sign-in
+  RewriteRule ^(login|team)/?$ /admin/login [L,R=302]
 </IfModule>
 
 <IfModule mod_mime.c>
@@ -27,6 +50,9 @@ ErrorDocument 404 /404.html
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
   ExpiresByType font/woff2 "access plus 1 year"
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/svg+xml "access plus 1 month"

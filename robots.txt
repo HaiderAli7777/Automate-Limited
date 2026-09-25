@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /install/
+Disallow: /contact/
 
 Sitemap: https://automateltd.com/sitemap.xml
