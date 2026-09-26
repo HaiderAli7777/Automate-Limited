@@ -1,14 +1,19 @@
 <?php
-/* sitemap.xml (rewritten here by .htaccess): the public pages plus every live job posting. */
+/* sitemap.xml (rewritten here by .htaccess): the public pages, each service, and every live job posting. */
 declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
 
 header('Content-Type: application/xml; charset=utf-8');
-$urls = [
-    ['loc' => abs_url(''), 'lastmod' => date('Y-m-d', (int) @filemtime(__DIR__ . '/index.php'))],
-    ['loc' => abs_url('careers/'), 'lastmod' => date('Y-m-d')],
-    ['loc' => abs_url('privacy/'), 'lastmod' => date('Y-m-d', (int) @filemtime(__DIR__ . '/privacy/index.php'))],
-];
+$mod = static fn (string $file): string => date('Y-m-d', (int) @filemtime(__DIR__ . '/' . $file));
+$urls = [['loc' => abs_url(''), 'lastmod' => $mod('index.php')]];
+foreach (['services/', 'odoo-modules/', 'how-we-work/', 'pricing/', 'faq/', 'contact/'] as $page) {
+    $urls[] = ['loc' => abs_url($page), 'lastmod' => $mod($page . 'index.php')];
+}
+foreach (array_keys(site_services()) as $slug) {
+    $urls[] = ['loc' => abs_url('services/' . $slug), 'lastmod' => $mod('app/content/services.php')];
+}
+$urls[] = ['loc' => abs_url('careers/'), 'lastmod' => date('Y-m-d')];
+$urls[] = ['loc' => abs_url('privacy/'), 'lastmod' => $mod('privacy/index.php')];
 if (app_installed()) {
     try {
         foreach (public_jobs() as $job) {

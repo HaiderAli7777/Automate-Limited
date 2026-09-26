@@ -26,6 +26,7 @@
           <?= fs('service', 'Service', array_combine(array_merge(lead_services(), ['Not sure yet']), array_merge(lead_services(), ['Not sure yet']))) ?>
           <?= fs('source', 'Source', LEAD_SOURCES, 'phone') ?>
         </div>
+        <?= fi('topic', 'Module or topic', '', ['optional' => true, 'placeholder' => 'For example Inventory, or Shopify store', 'help' => 'Handy for Odoo enquiries: which module they asked about.']) ?>
         <?= ft('message', 'What they asked for', '', ['optional' => true, 'attrs' => ['rows' => 4]]) ?>
       </fieldset>
     </div></div>
@@ -37,7 +38,7 @@
           <?= fs('currency', 'Currency', array_combine(currencies(), currencies()), $cur) ?>
         </div>
         <?= fs('priority', 'Priority', LEAD_PRIORITIES, 'normal') ?>
-        <?= fs('owner_id', 'Owner', user_options(auth_id(), 'Unassigned', ['admin', 'manager', 'sales'])) ?>
+        <?= fs('owner_id', 'Owner', user_options(auth_id(), 'Unassigned', 'crm.manage')) ?>
         <?= fi('next_follow_up', 'Next follow-up', '', ['type' => 'datetime-local', 'optional' => true]) ?>
         <?= fi('expected_close', 'Expected close', '', ['type' => 'date', 'optional' => true]) ?>
       </div></div>

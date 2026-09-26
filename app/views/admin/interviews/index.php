@@ -52,7 +52,7 @@ $tabs = ['agenda' => 'Upcoming', 'month' => 'Calendar', 'past' => 'Past'];
   </div>
 <?php else: ?>
   <?php if (!$rows): ?>
-    <div class="panel"><div class="empty"><?= icon('calendar-dots') ?><h3><?= $view === 'past' ? 'No past interviews.' : 'Nothing scheduled.' ?></h3><p>Open a candidate from the pipeline and choose Schedule interview.</p><?php if (user_can('ats')): ?><a class="btn btn--quiet" href="<?= e(admin_url('pipeline')) ?>">Go to the pipeline</a><?php endif; ?></div></div>
+    <div class="panel"><div class="empty"><?= icon('calendar-dots') ?><h3><?= $view === 'past' ? 'No past interviews.' : 'Nothing scheduled.' ?></h3><p>Open a candidate from the pipeline and choose Schedule interview.</p><?php if (user_can('ats.manage')): ?><a class="btn btn--quiet" href="<?= e(admin_url('pipeline')) ?>">Go to the pipeline</a><?php endif; ?></div></div>
   <?php else:
       $groups = [];
       foreach ($rows as $r) { $groups[substr($r['scheduled_at'], 0, 10)][] = $r; }

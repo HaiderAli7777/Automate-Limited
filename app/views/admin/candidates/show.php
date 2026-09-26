@@ -12,8 +12,8 @@
     </div>
   </div>
   <div class="profile__actions">
-    <a class="btn btn--quiet" href="<?= e(admin_url('candidates/' . $c['id'] . '/edit')) ?>"><?= icon('pencil-simple') ?>Edit</a>
-    <form method="post" action="<?= e(admin_url('candidates/' . $c['id'] . '/delete')) ?>" data-confirm="Delete <?= e($name) ?>, every application, note and file? This can't be undone."><?= csrf_field() ?><button class="btn btn--danger" type="submit"><?= icon('trash') ?>Delete</button></form>
+    <?php if (user_can('ats.manage')): ?><a class="btn btn--quiet" href="<?= e(admin_url('candidates/' . $c['id'] . '/edit')) ?>"><?= icon('pencil-simple') ?>Edit</a><?php endif; ?>
+    <?php if (user_can('ats.manage') && user_can('data.delete')): ?><form method="post" action="<?= e(admin_url('candidates/' . $c['id'] . '/delete')) ?>" data-confirm="Delete <?= e($name) ?>, every application, note and file? This can't be undone."><?= csrf_field() ?><button class="btn btn--danger" type="submit"><?= icon('trash') ?>Delete</button></form><?php endif; ?>
   </div>
 </div>
 <div class="split">
@@ -30,7 +30,7 @@
         <?php endforeach; ?>
       </div>
       <?php else: ?><div class="empty empty--sm"><p>In the talent pool, not in any pipeline yet.</p></div><?php endif; ?>
-      <?php if ($openJobs): ?>
+      <?php if ($openJobs && user_can('ats.manage')): ?>
       <form method="post" action="<?= e(admin_url('candidates/' . $c['id'] . '/apply')) ?>" class="panel__foot row">
         <?= csrf_field() ?>
         <select class="select select--sm" name="job_id" aria-label="Job" style="max-width:320px"><?php foreach ($openJobs as $j): ?><option value="<?= (int) $j['id'] ?>"><?= e($j['title']) ?></option><?php endforeach; ?></select>

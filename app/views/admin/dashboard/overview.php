@@ -14,6 +14,27 @@ $leadStages = user_can('crm') ? lead_stages() : [];
   </div>
 </div>
 
+<?php if (user_can('settings') && setting('onboarding_dismissed', '0') !== '1'):
+  $steps = onboarding_steps(); $done = count(array_filter($steps, static fn ($st) => $st['done']));
+  if ($done < count($steps)): ?>
+<section class="panel onboard" aria-labelledby="onboard-title">
+  <div class="panel__head">
+    <div><h2 id="onboard-title">Get set up</h2><p class="muted small"><?= $done ?> of <?= count($steps) ?> done. These make the team area work well from day one.</p></div>
+    <form method="post" action="<?= e(admin_url('onboarding/dismiss')) ?>"><?= csrf_field() ?><button class="btn btn--ghost btn--sm" type="submit">Hide</button></form>
+  </div>
+  <div class="meter onboard__meter" role="progressbar" aria-valuemin="0" aria-valuemax="<?= count($steps) ?>" aria-valuenow="<?= $done ?>" aria-label="Setup progress"><i style="width:<?= round($done / count($steps) * 100) ?>%"></i></div>
+  <ol class="onboard__steps">
+    <?php foreach ($steps as $i => $st): ?>
+      <li class="<?= $st['done'] ? 'is-done' : '' ?>">
+        <span class="onboard__n"><?= $st['done'] ? icon('check') : $i + 1 ?></span>
+        <div class="onboard__text"><b><?= e($st['title']) ?></b><span><?= e($st['text']) ?></span></div>
+        <?php if (!$st['done']): ?><a class="btn btn--quiet btn--sm" href="<?= e($st['href']) ?>"<?= str_starts_with($st['href'], admin_url()) ? '' : ' target="_blank" rel="noopener"' ?>><?= e($st['cta']) ?></a><?php endif; ?>
+      </li>
+    <?php endforeach; ?>
+  </ol>
+</section>
+<?php endif; endif; ?>
+
 <?php if ($stats): ?>
 <div class="kpis">
   <?php if (user_can('ats')): ?>

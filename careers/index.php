@@ -205,6 +205,10 @@ if (is_post()) {
         }
 
         $app = application_full($appId);
+        if ($app) {
+            notify(array_merge(users_with('ats.manage'), $job['hiring_manager_id'] ? [(int) $job['hiring_manager_id']] : []),
+                'New application: ' . candidate_name($app), admin_url('applications/' . $appId), $job['title'], 'user-plus');
+        }
         if ($app && setting('notify_new_application', '1') === '1') {
             $to = (string) setting('hr_email', '');
             if ($job['hiring_manager_id']) {

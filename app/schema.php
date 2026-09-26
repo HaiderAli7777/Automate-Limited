@@ -322,6 +322,23 @@ function schema_migrations(): array
                 UNIQUE KEY uq_tpl_key (tkey)
             )' . SQL_TABLE_OPTS,
         ],
+
+        // 2: per-user access rights, in-app notifications, the Odoo module an enquiry is about
+        2 => [
+            'ALTER TABLE users ADD COLUMN permissions TEXT NULL AFTER role',
+            'ALTER TABLE leads ADD COLUMN topic VARCHAR(120) NULL AFTER service',
+            'CREATE TABLE IF NOT EXISTS notifications (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                body TEXT NULL,
+                link VARCHAR(500) NULL,
+                icon VARCHAR(40) NULL,
+                read_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                KEY idx_notif_user (user_id, read_at, created_at)
+            )' . SQL_TABLE_OPTS,
+        ],
     ];
 }
 

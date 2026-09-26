@@ -2,10 +2,26 @@
 /* CRM leads: website enquiries and deals, the sales pipeline board, activity logging and follow-ups. */
 declare(strict_types=1);
 
+/** A lead the signed-in person is allowed to open. */
+function scoped_lead(int $id): array
+{
+    $lead = lead_full($id);
+    if (!$lead) {
+        abort(404);
+    }
+    if (!user_can('crm.all') && (int) $lead['owner_id'] !== auth_id()) {
+        abort(403, 'This lead is assigned to someone else.');
+    }
+    return $lead;
+}
+
 function lead_query(): array
 {
     $where = [];
     $params = [];
+    if (!user_can('crm.all')) {
+        $where[] = 'l.owner_id = ' . (int) auth_id();
+    }
     $q = input('q');
     if ($q !== '') {
         $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
@@ -81,7 +97,7 @@ function leads_export(): void
 
 function leads_board(): void
 {
-    $where = ['1 = 1'];
+    $where = ['1 = 1' . crm_scope('l')];
     $params = [];
     $owner = input('owner');
     if ($owner === 'me') {
@@ -130,7 +146,8 @@ function lead_input(array &$errors): array
         'value' => $value,
         'currency' => in_array(input('currency'), currencies(), true) ? input('currency') : (string) setting('default_currency', 'PKR'),
         'priority' => isset(LEAD_PRIORITIES[input('priority')]) ? input('priority') : 'normal',
-        'owner_id' => input_int('owner_id') ?: null,
+        'owner_id' => user_can('crm.all') ? (input_int('owner_id') ?: null) : auth_id(),
+        'topic' => nullable(mb_substr(input('topic'), 0, 120)),
         'next_follow_up' => $follow,
         'expected_close' => parse_dt(input('expected_close'), false),
         'updated_at' => now(),
@@ -191,15 +208,18 @@ function leads_create(): void
         log_activity('lead', $id, 'created', 'Lead added by hand');
         return $id;
     });
+    if (!empty($data['owner_id'])) {
+        notify([(int) $data['owner_id']], 'Lead assigned to you: ' . $data['title'], admin_url('leads/' . $id), 'Added by ' . auth_user()['name'], 'funnel');
+    }
     flash('success', 'Lead added.');
     redirect(admin_url('leads/' . $id));
 }
 
 function leads_show(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     $timeline = activities_for([['lead', [$id]], ['contact', $lead['contact_id'] ? [(int) $lead['contact_id']] : []]]);
-    $others = $lead['contact_id'] ? db()->all('SELECT id, title, stage_id, status, value, currency, created_at FROM leads WHERE contact_id = ? AND id <> ? ORDER BY created_at DESC', [(int) $lead['contact_id'], $id]) : [];
+    $others = $lead['contact_id'] ? db()->all('SELECT id, title, stage_id, status, value, currency, created_at FROM leads WHERE contact_id = ? AND id <> ?' . crm_scope() . ' ORDER BY created_at DESC', [(int) $lead['contact_id'], $id]) : [];
     $templates = db()->all("SELECT tkey, name FROM email_templates WHERE module = 'crm' ORDER BY name");
     admin_view('leads/show', [
         'title' => $lead['title'],
@@ -214,7 +234,7 @@ function leads_show(int $id): void
 
 function leads_update(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     $errors = [];
     $data = lead_input($errors);
     if ($errors) {
@@ -232,6 +252,7 @@ function leads_update(int $id): void
         log_activity('lead', $id, 'updated', 'Updated ' . strtolower(implode(', ', $changes)));
     }
     if ($data['owner_id'] && (int) $data['owner_id'] !== (int) $lead['owner_id'] && (int) $data['owner_id'] !== auth_id()) {
+        notify([(int) $data['owner_id']], 'Lead assigned to you: ' . $data['title'], admin_url('leads/' . $id), 'Assigned by ' . auth_user()['name'], 'funnel');
         $email = db()->value('SELECT email FROM users WHERE id = ? AND is_active = 1', [(int) $data['owner_id']]);
         if ($email) {
             Mailer::send((string) $email, 'Lead assigned to you: ' . $data['title'], auth_user()['name'] . " assigned you a lead.\n\n" . $data['title'] . "\n" . site_origin() . admin_url('leads/' . $id));
@@ -243,7 +264,7 @@ function leads_update(int $id): void
 
 function leads_stage(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     $to = lead_move($id, input_int('stage_id'), input('reason'));
     $msg = $to ? $lead['title'] . ' moved to ' . $to['name'] . '.' : '';
     if ($to && $to['kind'] === 'won') {
@@ -260,7 +281,7 @@ function leads_stage(int $id): void
 
 function leads_activity(int $id): void
 {
-    lead_full($id) ?? abort(404);
+    scoped_lead($id);
     $kind = isset(ACTIVITY_KINDS[input('kind')]) ? input('kind') : 'note';
     $body = trim(str_replace("\r\n", "\n", (string) ($_POST['body'] ?? '')));
     if ($body === '') {
@@ -289,7 +310,7 @@ function leads_activity(int $id): void
 
 function leads_email_preview(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     $tpl = email_template(input('template'));
     if (!$tpl || $tpl['module'] !== 'crm') {
         json_out(['ok' => false, 'error' => 'Template not found.'], 404);
@@ -300,7 +321,7 @@ function leads_email_preview(int $id): void
 
 function leads_email(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     if (!valid_email((string) $lead['contact_email'])) {
         flash('error', 'This contact has no email address. Add one first.');
         redirect(admin_url('leads/' . $id));
@@ -328,7 +349,7 @@ function leads_email(int $id): void
 
 function leads_delete(int $id): void
 {
-    $lead = lead_full($id) ?? abort(404);
+    $lead = scoped_lead($id);
     db()->tx(static function (Db $db) use ($id): void {
         $db->delete('activities', "entity_type = 'lead' AND entity_id = ?", [$id]);
         $db->delete('tasks', "entity_type = 'lead' AND entity_id = ?", [$id]);
@@ -336,4 +357,42 @@ function leads_delete(int $id): void
     });
     flash('success', 'Deleted "' . $lead['title'] . '".');
     redirect(admin_url('leads'));
+}
+
+/** Change several leads at once from the list. */
+function leads_bulk(): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', input_array('ids')))));
+    $action = input('action');
+    if (!$ids) {
+        flash('error', 'Tick at least one lead first.');
+        back(admin_url('leads'));
+    }
+    $done = 0;
+    foreach ($ids as $id) {
+        $lead = lead_full($id);
+        if (!$lead || (!user_can('crm.all') && (int) $lead['owner_id'] !== auth_id())) {
+            continue;
+        }
+        if ($action === 'owner' && user_can('crm.all')) {
+            $owner = input_int('owner_id') ?: null;
+            db()->update('leads', ['owner_id' => $owner, 'updated_at' => now()], 'id = ?', [$id]);
+            log_activity('lead', $id, 'updated', $owner ? 'Owner set to ' . user_name($owner) : 'Owner removed');
+            if ($owner) {
+                notify([$owner], 'Lead assigned to you: ' . $lead['title'], admin_url('leads/' . $id), 'Assigned by ' . auth_user()['name'], 'funnel');
+            }
+            $done++;
+        } elseif ($action === 'stage') {
+            if (lead_move($id, input_int('stage_id'), input('reason'))) {
+                $done++;
+            }
+        } elseif ($action === 'delete' && user_can('data.delete')) {
+            db()->delete('activities', "entity_type = 'lead' AND entity_id = ?", [$id]);
+            db()->delete('tasks', "entity_type = 'lead' AND entity_id = ?", [$id]);
+            db()->delete('leads', 'id = ?', [$id]);
+            $done++;
+        }
+    }
+    flash($done ? 'success' : 'info', $done ? plural($done, 'lead') . ' updated.' : 'Nothing changed.');
+    back(admin_url('leads'));
 }

@@ -1,5 +1,5 @@
 /* Automate Limited: public site behaviour. Every block checks that its elements exist,
-   so the same file serves the homepage, careers pages and simple pages. */
+   so the same file serves the homepage, service pages, careers and simple pages. */
 (function () {
   "use strict";
   window.AUTOMATE_READY = true;
@@ -71,6 +71,27 @@
     });
   }
 
+  /* ------------------------------------------------------------ services dropdown
+     Opens on hover with a mouse, and on the caret button for keyboard and touch. */
+  all("[data-dd]").forEach(function (dd) {
+    var btn = dd.querySelector(".dd__toggle"), closeTimer = null;
+    function set(open) {
+      clearTimeout(closeTimer);
+      dd.classList.toggle("is-open", open);
+      if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    if (btn) btn.addEventListener("click", function () { set(!dd.classList.contains("is-open")); });
+    if (finePointer) {
+      dd.addEventListener("mouseenter", function () { set(true); });
+      dd.addEventListener("mouseleave", function () { closeTimer = setTimeout(function () { set(false); }, 160); });
+    }
+    dd.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && dd.classList.contains("is-open")) { set(false); if (btn) btn.focus(); }
+    });
+    dd.addEventListener("focusout", function (e) { if (!dd.contains(e.relatedTarget)) set(false); });
+    document.addEventListener("click", function (e) { if (!dd.contains(e.target)) set(false); });
+  });
+
   /* ------------------------------------------------------------ services explorer */
   var tabs = all('.svx [role="tab"]');
   var panels = tabs.map(function (t) { return $(t.getAttribute("aria-controls")); });
@@ -128,25 +149,6 @@
       }, { threshold: 0.55 });
       morphIO.observe(morph);
     }
-  }
-
-  /* ------------------------------------------------------------ nav: current section
-     A thin band across the middle of the screen. Whatever tracked section sits in
-     it is current; when an untracked section is there, nothing is. */
-  var watched = all(".hdr__nav a[data-watch]");
-  if (watched.length && "IntersectionObserver" in window) {
-    var inBand = {};
-    var bandSections = all("main > section");
-    var spy = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { inBand[e.target.id] = e.isIntersecting; });
-      var current = null;
-      bandSections.forEach(function (sec) { if (inBand[sec.id]) current = sec.id; });
-      watched.forEach(function (a) {
-        if (a.getAttribute("data-watch") === current) a.setAttribute("aria-current", "true");
-        else a.removeAttribute("aria-current");
-      });
-    }, { rootMargin: "-45% 0px -50% 0px" });
-    bandSections.forEach(function (sec) { if (sec.id) spy.observe(sec); });
   }
 
   /* ------------------------------------------------------------ eased wheel scrolling
@@ -211,19 +213,22 @@
      One rAF loop, running only while the hero or the timeline is on screen. */
   var stage = $("top"), pin = stage ? stage.querySelector(".stage__pin") : null;
   var proc = $("proc");
-  if (stage && pin && proc) {
+  if (!(stage && pin)) { stage = null; pin = null; }
+  if (stage || proc) {
     var heroCopy = $("heroCopy"), hub = $("hub"), lines = $("orbitLines");
     var chips = all(".chip");
     var panel = $("panel"), panelMedia = $("panelMedia"), panelCopy = $("panelCopy");
-    var steps = all(".step", proc);
+    var steps = proc ? all(".step", proc) : [];
     var motionStage = false;
     var geo = { top: 0, range: 1, inset: [0, 0, 0, 0], vec: [], dots: [] };
     var visible = { stage: false, proc: false }, running = false, lastY = -1, dirty = true;
 
     var measure = function () {
-      motionStage = !reduce && getComputedStyle(pin).position === "sticky";
-      geo.top = stage.getBoundingClientRect().top + window.scrollY;
-      geo.range = Math.max(1, stage.offsetHeight - window.innerHeight);
+      motionStage = !!stage && !reduce && getComputedStyle(pin).position === "sticky";
+      if (stage) {
+        geo.top = stage.getBoundingClientRect().top + window.scrollY;
+        geo.range = Math.max(1, stage.offsetHeight - window.innerHeight);
+      }
       if (motionStage) {
         hub.style.transform = "";
         chips.forEach(function (c) { c.style.transform = ""; });
@@ -236,7 +241,7 @@
         });
       }
       var vertical = window.matchMedia("(max-width: 799px)").matches;
-      var ph = proc.offsetHeight;
+      var ph = proc ? proc.offsetHeight : 1;
       geo.dots = steps.map(function (s, i) {
         return vertical ? (s.offsetTop + 20) / Math.max(1, ph) : i / Math.max(1, steps.length - 1);
       });
@@ -295,8 +300,8 @@
     measure();
     if (reduce) steps.forEach(function (s) { s.classList.add("is-lit"); });
     if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (en) { visible.stage = en[0].isIntersecting; dirty = true; wake(); }).observe(stage);
-      new IntersectionObserver(function (en) { visible.proc = en[0].isIntersecting; dirty = true; wake(); }).observe(proc);
+      if (stage) new IntersectionObserver(function (en) { visible.stage = en[0].isIntersecting; dirty = true; wake(); }).observe(stage);
+      if (proc) new IntersectionObserver(function (en) { visible.proc = en[0].isIntersecting; dirty = true; wake(); }).observe(proc);
     }
     var resizeTimer;
     window.addEventListener("resize", function () {
@@ -421,6 +426,19 @@
         if (btn) { btn.disabled = false; btn.textContent = label; }
       });
     });
+  });
+
+  /* ------------------------------------------------------------ enquiry form: the Odoo module field */
+  all("[data-service-select]").forEach(function (sel) {
+    var form = sel.closest("form"), fld = form ? form.querySelector("[data-module-field]") : null;
+    if (!fld) return;
+    var sync = function () {
+      var on = sel.value === "Odoo ERP";
+      fld.hidden = !on;
+      fld.parentNode.classList.toggle("form__row--one", !on);
+    };
+    sel.addEventListener("change", sync);
+    sync();
   });
 
   /* ------------------------------------------------------------ application form */

@@ -4,11 +4,11 @@
   <form class="phead__actions" method="get" action="<?= e(admin_url('pipeline')) ?>" data-autosubmit>
     <input class="input input--sm" type="search" name="q" value="<?= e($q) ?>" placeholder="Find a candidate" aria-label="Find a candidate" style="width:200px">
     <select class="select select--sm" name="job" aria-label="Job" style="width:auto"><option value="">All open jobs</option><?php foreach ($jobs as $j): ?><option value="<?= (int) $j['id'] ?>"<?= selected($jobId, $j['id']) ?>><?= e($j['title']) ?></option><?php endforeach; ?></select>
-    <a class="btn btn--primary btn--sm" href="<?= e(admin_url('candidates/new') . ($jobId ? '?job=' . $jobId : '')) ?>"><?= icon('user-plus') ?>Add candidate</a>
+    <?php if (user_can('ats.manage')): ?><a class="btn btn--primary btn--sm" href="<?= e(admin_url('candidates/new') . ($jobId ? '?job=' . $jobId : '')) ?>"><?= icon('user-plus') ?>Add candidate</a><?php endif; ?>
   </form>
 </div>
 <?php if (!$apps && !$jobs): ?>
-  <div class="panel"><div class="empty"><?= icon('kanban') ?><h3>No open jobs yet.</h3><p>Publish a job and applications will flow into this board.</p><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>">Create a job</a></div></div>
+  <div class="panel"><div class="empty"><?= icon('kanban') ?><h3>No open jobs yet.</h3><p>Publish a job and applications will flow into this board.</p><?php if (user_can('ats.manage')): ?><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>">Create a job</a><?php endif; ?></div></div>
 <?php else: ?>
   <?php partial('admin/partials/ats-board', ['apps' => $apps, 'showJob' => !$jobId]); ?>
 <?php endif; ?>

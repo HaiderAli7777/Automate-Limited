@@ -5,7 +5,7 @@ $stages = ats_stages();
 ?>
 <div class="phead">
   <div><h1>ATS dashboard</h1><p class="phead__sub">Hiring at a glance: volume, speed and where candidates stall.</p></div>
-  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(admin_url('pipeline')) ?>"><?= icon('kanban') ?>Pipeline</a><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>"><?= icon('plus') ?>New job</a></div>
+  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(admin_url('pipeline')) ?>"><?= icon('kanban') ?>Pipeline</a><?php if (user_can('ats.manage')): ?><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>"><?= icon('plus') ?>New job</a><?php endif; ?></div>
 </div>
 <?= period_filter($p, 'dashboard/ats') ?>
 
@@ -51,7 +51,7 @@ $stages = ats_stages();
 
   <div class="panel span-8">
     <div class="panel__head"><h2>Open jobs</h2><a class="btn btn--ghost btn--sm" href="<?= e(admin_url('jobs')) ?>">All jobs</a></div>
-    <?php if (!$jobs): ?><div class="empty empty--sm"><p>No open jobs. <a class="link" href="<?= e(admin_url('jobs/new')) ?>">Post one</a>.</p></div><?php else: ?>
+    <?php if (!$jobs): ?><div class="empty empty--sm"><p>No open jobs.<?php if (user_can('ats.manage')): ?> <a class="link" href="<?= e(admin_url('jobs/new')) ?>">Post one</a>.<?php endif; ?></p></div><?php else: ?>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>Job</th><th class="num">Applied (period)</th><th class="num">To review</th><th class="num">In process</th><th class="num">Interviews booked</th><th class="num">Hired</th><th class="num">Days open</th></tr></thead>
       <tbody><?php foreach ($jobs as $j): ?>

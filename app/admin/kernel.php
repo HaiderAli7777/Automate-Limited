@@ -10,6 +10,11 @@ require APP_DIR . '/schema.php';
  */
 function admin_routes(): array
 {
+    // access: 'public', 'user' (anyone signed in), a permission, or a list of permissions that are all required
+    $viewAts = 'ats';
+    $editAts = 'ats.manage';
+    $viewCrm = 'crm';
+    $editCrm = 'crm.manage';
     return [
         ['GET', 'login', 'auth_login_page', 'public'],
         ['POST', 'login', 'auth_login_submit', 'public'],
@@ -22,69 +27,76 @@ function admin_routes(): array
         ['POST', 'account', 'account_save', 'user'],
 
         ['GET', '', 'dashboard_overview', 'user'],
-        ['GET', 'dashboard/ats', 'dashboard_ats', 'ats'],
-        ['GET', 'dashboard/crm', 'dashboard_crm', 'crm'],
+        ['POST', 'onboarding/dismiss', 'onboarding_dismiss', 'settings'],
+        ['GET', 'dashboard/ats', 'dashboard_ats', $viewAts],
+        ['GET', 'dashboard/crm', 'dashboard_crm', $viewCrm],
         ['GET', 'search', 'search_page', 'user'],
+        ['GET', 'notifications', 'notifications_page', 'user'],
+        ['GET', 'notifications/(\d+)/open', 'notifications_open', 'user'],
+        ['POST', 'notifications/read-all', 'notifications_read_all', 'user'],
+        ['GET', 'activity', 'activity_page', 'audit.view'],
 
-        ['GET', 'jobs', 'jobs_index', 'ats'],
-        ['GET', 'jobs/new', 'jobs_form', 'ats'],
-        ['POST', 'jobs/new', 'jobs_save', 'ats'],
-        ['GET', 'jobs/(\d+)', 'jobs_show', 'ats'],
-        ['GET', 'jobs/(\d+)/edit', 'jobs_form', 'ats'],
-        ['POST', 'jobs/(\d+)/edit', 'jobs_save', 'ats'],
-        ['POST', 'jobs/(\d+)/status', 'jobs_status', 'ats'],
-        ['POST', 'jobs/(\d+)/duplicate', 'jobs_duplicate', 'ats'],
-        ['POST', 'jobs/(\d+)/delete', 'jobs_delete', 'ats'],
+        ['GET', 'jobs', 'jobs_index', $viewAts],
+        ['GET', 'jobs/new', 'jobs_form', $editAts],
+        ['POST', 'jobs/new', 'jobs_save', $editAts],
+        ['GET', 'jobs/(\d+)', 'jobs_show', $viewAts],
+        ['GET', 'jobs/(\d+)/edit', 'jobs_form', $editAts],
+        ['POST', 'jobs/(\d+)/edit', 'jobs_save', $editAts],
+        ['POST', 'jobs/(\d+)/status', 'jobs_status', $editAts],
+        ['POST', 'jobs/(\d+)/duplicate', 'jobs_duplicate', $editAts],
+        ['POST', 'jobs/(\d+)/delete', 'jobs_delete', [$editAts, 'data.delete']],
 
-        ['GET', 'candidates', 'candidates_index', 'ats'],
-        ['GET', 'candidates/export', 'candidates_export', 'ats'],
-        ['GET', 'candidates/new', 'candidates_form', 'ats'],
-        ['POST', 'candidates/new', 'candidates_create', 'ats'],
-        ['GET', 'candidates/(\d+)', 'candidates_show', 'ats'],
-        ['GET', 'candidates/(\d+)/edit', 'candidates_edit', 'ats'],
-        ['POST', 'candidates/(\d+)/edit', 'candidates_update', 'ats'],
-        ['POST', 'candidates/(\d+)/apply', 'candidates_add_to_job', 'ats'],
-        ['POST', 'candidates/(\d+)/files', 'candidates_upload', 'ats'],
-        ['POST', 'candidates/(\d+)/delete', 'candidates_delete', 'ats'],
+        ['GET', 'candidates', 'candidates_index', $viewAts],
+        ['GET', 'candidates/export', 'candidates_export', [$viewAts, 'data.export']],
+        ['GET', 'candidates/new', 'candidates_form', $editAts],
+        ['POST', 'candidates/new', 'candidates_create', $editAts],
+        ['GET', 'candidates/(\d+)', 'candidates_show', $viewAts],
+        ['GET', 'candidates/(\d+)/edit', 'candidates_edit', $editAts],
+        ['POST', 'candidates/(\d+)/edit', 'candidates_update', $editAts],
+        ['POST', 'candidates/(\d+)/apply', 'candidates_add_to_job', $editAts],
+        ['POST', 'candidates/(\d+)/files', 'candidates_upload', $editAts],
+        ['POST', 'candidates/(\d+)/delete', 'candidates_delete', [$editAts, 'data.delete']],
 
-        ['GET', 'pipeline', 'pipeline_board', 'ats'],
+        ['GET', 'pipeline', 'pipeline_board', $viewAts],
+        ['POST', 'applications/bulk', 'applications_bulk', $editAts],
         ['GET', 'applications/(\d+)', 'applications_show', 'interviews'],
-        ['POST', 'applications/(\d+)/stage', 'applications_stage', 'ats'],
+        ['POST', 'applications/(\d+)/stage', 'applications_stage', $editAts],
         ['POST', 'applications/(\d+)/note', 'applications_note', 'interviews'],
-        ['POST', 'applications/(\d+)/email', 'applications_email', 'ats'],
-        ['GET', 'applications/(\d+)/email-preview', 'applications_email_preview', 'ats'],
-        ['POST', 'applications/(\d+)/offer', 'applications_offer', 'ats'],
-        ['POST', 'applications/(\d+)/owner', 'applications_owner', 'ats'],
+        ['POST', 'applications/(\d+)/email', 'applications_email', $editAts],
+        ['GET', 'applications/(\d+)/email-preview', 'applications_email_preview', $editAts],
+        ['POST', 'applications/(\d+)/offer', 'applications_offer', $editAts],
+        ['POST', 'applications/(\d+)/owner', 'applications_owner', $editAts],
 
         ['GET', 'interviews', 'interviews_index', 'interviews'],
-        ['GET', 'interviews/new', 'interviews_form', 'ats'],
-        ['POST', 'interviews/new', 'interviews_save', 'ats'],
+        ['GET', 'interviews/new', 'interviews_form', $editAts],
+        ['POST', 'interviews/new', 'interviews_save', $editAts],
         ['GET', 'interviews/(\d+)', 'interviews_show', 'interviews'],
-        ['GET', 'interviews/(\d+)/edit', 'interviews_form', 'ats'],
-        ['POST', 'interviews/(\d+)/edit', 'interviews_save', 'ats'],
-        ['POST', 'interviews/(\d+)/status', 'interviews_status', 'ats'],
+        ['GET', 'interviews/(\d+)/edit', 'interviews_form', $editAts],
+        ['POST', 'interviews/(\d+)/edit', 'interviews_save', $editAts],
+        ['POST', 'interviews/(\d+)/status', 'interviews_status', $editAts],
         ['POST', 'interviews/(\d+)/feedback', 'interviews_feedback', 'interviews'],
         ['GET', 'interviews/(\d+)/ics', 'interviews_ics', 'interviews'],
 
-        ['GET', 'leads', 'leads_index', 'crm'],
-        ['GET', 'leads/board', 'leads_board', 'crm'],
-        ['GET', 'leads/export', 'leads_export', 'crm'],
-        ['GET', 'leads/new', 'leads_form', 'crm'],
-        ['POST', 'leads/new', 'leads_create', 'crm'],
-        ['GET', 'leads/(\d+)', 'leads_show', 'crm'],
-        ['POST', 'leads/(\d+)/update', 'leads_update', 'crm'],
-        ['POST', 'leads/(\d+)/stage', 'leads_stage', 'crm'],
-        ['POST', 'leads/(\d+)/activity', 'leads_activity', 'crm'],
-        ['POST', 'leads/(\d+)/email', 'leads_email', 'crm'],
-        ['GET', 'leads/(\d+)/email-preview', 'leads_email_preview', 'crm'],
-        ['POST', 'leads/(\d+)/delete', 'leads_delete', 'crm'],
+        ['GET', 'leads', 'leads_index', $viewCrm],
+        ['GET', 'leads/board', 'leads_board', $viewCrm],
+        ['GET', 'leads/export', 'leads_export', [$viewCrm, 'data.export']],
+        ['POST', 'leads/bulk', 'leads_bulk', $editCrm],
+        ['GET', 'leads/new', 'leads_form', $editCrm],
+        ['POST', 'leads/new', 'leads_create', $editCrm],
+        ['GET', 'leads/(\d+)', 'leads_show', $viewCrm],
+        ['POST', 'leads/(\d+)/update', 'leads_update', $editCrm],
+        ['POST', 'leads/(\d+)/stage', 'leads_stage', $editCrm],
+        ['POST', 'leads/(\d+)/activity', 'leads_activity', $editCrm],
+        ['POST', 'leads/(\d+)/email', 'leads_email', $editCrm],
+        ['GET', 'leads/(\d+)/email-preview', 'leads_email_preview', $editCrm],
+        ['POST', 'leads/(\d+)/delete', 'leads_delete', [$editCrm, 'data.delete']],
 
-        ['GET', 'contacts', 'contacts_index', 'crm'],
-        ['GET', 'contacts/new', 'contacts_form', 'crm'],
-        ['POST', 'contacts/new', 'contacts_save', 'crm'],
-        ['GET', 'contacts/(\d+)', 'contacts_show', 'crm'],
-        ['POST', 'contacts/(\d+)', 'contacts_save', 'crm'],
-        ['POST', 'contacts/(\d+)/delete', 'contacts_delete', 'crm'],
+        ['GET', 'contacts', 'contacts_index', $viewCrm],
+        ['GET', 'contacts/new', 'contacts_form', $editCrm],
+        ['POST', 'contacts/new', 'contacts_save', $editCrm],
+        ['GET', 'contacts/(\d+)', 'contacts_show', $viewCrm],
+        ['POST', 'contacts/(\d+)', 'contacts_save', $editCrm],
+        ['POST', 'contacts/(\d+)/delete', 'contacts_delete', [$editCrm, 'data.delete']],
 
         ['GET', 'tasks', 'tasks_index', 'user'],
         ['POST', 'tasks/new', 'tasks_create', 'user'],
@@ -93,13 +105,15 @@ function admin_routes(): array
 
         ['POST', 'activities/(\d+)/delete', 'activities_delete', 'user'],
         ['GET', 'files/(\d+)', 'files_download', 'interviews'],
-        ['POST', 'files/(\d+)/delete', 'files_delete', 'ats'],
+        ['POST', 'files/(\d+)/delete', 'files_delete', $editAts],
 
         ['GET', 'team', 'team_index', 'team'],
         ['GET', 'team/new', 'team_form', 'team'],
         ['POST', 'team/new', 'team_save', 'team'],
         ['GET', 'team/(\d+)', 'team_form', 'team'],
         ['POST', 'team/(\d+)', 'team_save', 'team'],
+        ['POST', 'team/(\d+)/invite', 'team_invite', 'team'],
+        ['POST', 'team/(\d+)/toggle', 'team_toggle', 'team'],
 
         ['GET', 'settings', 'settings_page', 'settings'],
         ['POST', 'settings', 'settings_save', 'settings'],
@@ -157,7 +171,9 @@ function admin_run(): void
                 redirect(admin_url('login') . $next);
             }
             if ($access !== 'user') {
-                require_can($access);
+                foreach ((array) $access as $perm) {
+                    require_can($perm);
+                }
             }
         }
         if ($method === 'POST') {
@@ -193,6 +209,7 @@ function nav_counts(): array
         'new_apps' => 0,
         'new_leads' => 0,
         'my_interviews' => 0,
+        'notifications' => (int) db()->value('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL', [$uid]),
     ];
     if (user_can('ats')) {
         $first = first_stage_id(ats_stages(), 'active');
@@ -200,7 +217,7 @@ function nav_counts(): array
     }
     if (user_can('crm')) {
         $first = first_stage_id(lead_stages(), 'open');
-        $c['new_leads'] = $first ? (int) db()->value("SELECT COUNT(*) FROM leads WHERE stage_id = ? AND status = 'open'", [$first]) : 0;
+        $c['new_leads'] = $first ? (int) db()->value("SELECT COUNT(*) FROM leads WHERE stage_id = ? AND status = 'open'" . crm_scope(), [$first]) : 0;
     }
     if (user_can('interviews')) {
         $c['my_interviews'] = (int) db()->value(
@@ -249,12 +266,12 @@ function csv_download(string $filename, array $header, iterable $rows): never
     exit;
 }
 
-/** Options for a user <select>. */
-function user_options(?int $selected, string $emptyLabel = 'Unassigned', array $roles = []): string
+/** Options for a user <select>, optionally only people holding a permission. */
+function user_options(?int $selected, string $emptyLabel = 'Unassigned', ?string $perm = null): string
 {
     $html = '<option value="">' . e($emptyLabel) . '</option>';
     foreach (active_users() as $u) {
-        if ($roles && !in_array($u['role'], $roles, true)) {
+        if ($perm !== null && !user_can($perm, $u) && (int) $u['id'] !== (int) $selected) {
             continue;
         }
         $html .= '<option value="' . (int) $u['id'] . '"' . selected($selected ?? '', $u['id']) . '>' . e($u['name']) . '</option>';

@@ -15,6 +15,7 @@ $publicUrl = abs_url('careers/' . $job['slug']);
     <?php if ($job['status'] === 'open'): ?>
       <a class="btn btn--quiet" href="<?= e($publicUrl) ?>" target="_blank" rel="noopener"><?= icon('arrow-square-out') ?>View posting</a>
     <?php endif; ?>
+    <?php if (user_can('ats.manage')): ?>
     <a class="btn btn--quiet" href="<?= e(admin_url('candidates/new') . '?job=' . $job['id']) ?>"><?= icon('user-plus') ?>Add candidate</a>
     <a class="btn btn--primary" href="<?= e(admin_url('jobs/' . $job['id'] . '/edit')) ?>"><?= icon('pencil-simple') ?>Edit</a>
     <details class="dropdown">
@@ -25,10 +26,13 @@ $publicUrl = abs_url('careers/' . $job['slug']);
         <?php endforeach; ?>
         <button type="button" data-copy="<?= e($publicUrl) ?>"><?= icon('copy') ?>Copy public link</button>
         <form method="post" action="<?= e(admin_url('jobs/' . $job['id'] . '/duplicate')) ?>"><?= csrf_field() ?><button type="submit"><?= icon('copy') ?>Duplicate</button></form>
+        <?php if (user_can('data.delete')): ?>
         <div class="dropdown__sep"></div>
         <form method="post" action="<?= e(admin_url('jobs/' . $job['id'] . '/delete')) ?>" data-confirm="Delete this job? This can't be undone."><?= csrf_field() ?><button type="submit" class="is-danger"><?= icon('trash') ?>Delete</button></form>
+        <?php endif; ?>
       </div>
     </details>
+    <?php endif; ?>
   </div>
 </div>
 

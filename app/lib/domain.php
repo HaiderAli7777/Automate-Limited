@@ -260,7 +260,7 @@ function can_view_application(int $appId): bool
     if (user_can('ats')) {
         return true;
     }
-    if (!is_role('interviewer')) {
+    if (!user_can('interviews.own')) {
         return false;
     }
     return (bool) db()->value(
@@ -332,6 +332,42 @@ function weighted_value(array $lead): float
 {
     $stage = lead_stages()[(int) $lead['stage_id']] ?? null;
     return (float) ($lead['value'] ?? 0) * ((int) ($stage['probability'] ?? 0)) / 100;
+}
+
+/* ------------------------------------------------------------------ in-app notifications */
+/** Notify team members inside the team area. Never notifies the person doing the action. */
+function notify(array $userIds, string $title, string $link = '', string $body = '', string $icon = 'bell'): void
+{
+    $me = auth_id();
+    $active = array_map('intval', array_column(active_users(), 'id'));
+    foreach (array_unique(array_map('intval', $userIds)) as $uid) {
+        if ($uid <= 0 || $uid === $me || !in_array($uid, $active, true)) {
+            continue;
+        }
+        db()->insert('notifications', [
+            'user_id' => $uid,
+            'title' => mb_substr($title, 0, 255),
+            'body' => $body !== '' ? mb_substr($body, 0, 1000) : null,
+            'link' => $link !== '' ? mb_substr($link, 0, 500) : null,
+            'icon' => $icon,
+            'created_at' => now(),
+        ]);
+    }
+}
+
+/** Who should hear about a new lead: its owner, or everyone who can work every lead. */
+function lead_audience(?int $ownerId): array
+{
+    if ($ownerId) {
+        return [$ownerId];
+    }
+    $ids = [];
+    foreach (active_users() as $u) {
+        if (user_can('crm.manage', $u) && user_can('crm.all', $u)) {
+            $ids[] = (int) $u['id'];
+        }
+    }
+    return $ids;
 }
 
 /* ------------------------------------------------------------------ jobs */

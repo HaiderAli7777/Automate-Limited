@@ -31,7 +31,7 @@ $hasPw = $s('smtp_password') !== '';
       <div class="grid-2">
         <?= fi('hr_email', 'New applications go to', $s('hr_email'), ['help' => 'Separate several addresses with commas. The hiring manager on a job is added automatically.']) ?>
         <?= fi('sales_email', 'New enquiries go to', $s('sales_email'), ['help' => 'Separate several addresses with commas.']) ?>
-        <?= fs('lead_default_owner', 'Assign new website leads to', user_options((int) $s('lead_default_owner', '0'), 'Nobody (assign by hand)', ['admin', 'manager', 'sales']), $s('lead_default_owner')) ?>
+        <?= fs('lead_default_owner', 'Assign new website leads to', user_options((int) $s('lead_default_owner', '0'), 'Nobody (assign by hand)', 'crm.manage'), $s('lead_default_owner')) ?>
         <?= fi('privacy_email', 'Privacy requests go to', $s('privacy_email'), ['type' => 'email', 'help' => 'Shown on the privacy notice.']) ?>
       </div>
       <?= fc('notify_new_application', 'Email the hiring team about each new application', $s('notify_new_application', '1') === '1') ?>

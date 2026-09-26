@@ -1,7 +1,6 @@
 <?php
 /** Site footer and the shared script. @var bool|null $home */
 $home = !empty($home);
-$to = static fn (string $hash): string => $home ? '#' . $hash : url('') . '#' . $hash;
 ?>
 <footer class="ftr" id="ftr">
   <div class="wrap">
@@ -11,32 +10,30 @@ $to = static fn (string $hash): string => $home ? '#' . $hash : url('') . '#' . 
           <svg viewBox="0 0 3309 753" aria-hidden="true"><use href="#lk"/></svg>
         </a>
         <p class="ftr__blurb">Odoo ERP, websites, and the design and marketing around them. Based in Pakistan, working with clients worldwide.</p>
+        <a class="btn btn--quiet ftr__cta" href="<?= e(url('contact/')) ?>">Start an enquiry</a>
       </div>
       <div>
         <p class="ftr__h">Services</p>
         <ul>
-          <li><a href="<?= e($to('svc-odoo')) ?>">Odoo ERP</a></li>
-          <li><a href="<?= e($to('svc-web')) ?>">Website development</a></li>
-          <li><a href="<?= e($to('svc-seo')) ?>">SEO</a></li>
-          <li><a href="<?= e($to('svc-marketing')) ?>">Digital marketing</a></li>
-          <li><a href="<?= e($to('svc-design')) ?>">Graphic design</a></li>
-          <li><a href="<?= e($to('svc-custom')) ?>">Custom solutions</a></li>
+          <?php foreach (site_services() as $slug => $s): ?><li><a href="<?= e(url('services/' . $slug)) ?>"><?= e($s['name']) ?></a></li><?php endforeach; ?>
+          <li><a href="<?= e(url('odoo-modules/')) ?>">Odoo modules</a></li>
         </ul>
       </div>
       <div>
         <p class="ftr__h">Company</p>
         <ul>
-          <li><a href="<?= e($to('how')) ?>">How we work</a></li>
-          <li><a href="<?= e($to('engage')) ?>">Pricing</a></li>
+          <li><a href="<?= e(url('how-we-work/')) ?>">How we work</a></li>
+          <li><a href="<?= e(url('pricing/')) ?>">Pricing</a></li>
           <li><a href="<?= e(url('careers/')) ?>">Careers</a></li>
-          <li><a href="<?= e($to('faq')) ?>">FAQ</a></li>
-          <li><a href="<?= e($to('contact')) ?>">Contact</a></li>
+          <li><a href="<?= e(url('faq/')) ?>">FAQ</a></li>
+          <li><a href="<?= e(url('contact/')) ?>">Contact</a></li>
         </ul>
       </div>
       <div>
         <p class="ftr__h">Contact</p>
         <ul>
           <li><a href="mailto:info@automateltd.com">info@automateltd.com</a></li>
+          <li><a href="<?= e(url('contact/')) ?>">Send us a message</a></li>
         </ul>
       </div>
     </div>
@@ -45,7 +42,7 @@ $to = static fn (string $hash): string => $home ? '#' . $hash : url('') . '#' . 
       <nav aria-label="Legal and team">
         <a href="<?= e(url('privacy/')) ?>">Privacy</a>
         <a class="ftr__team" href="<?= e(url('admin/')) ?>" rel="nofollow"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>Team login</a>
-        <?php if ($home): ?><a href="#top">Back to top</a><?php endif; ?>
+        <a href="#top" data-top>Back to top</a>
       </nav>
     </div>
   </div>

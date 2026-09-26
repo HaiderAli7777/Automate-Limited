@@ -26,6 +26,7 @@ function applications_show(int $id): void
         'nav' => $full ? 'pipeline' : 'interviews',
         'app' => $app,
         'full' => $full,
+        'edit' => user_can('ats.manage'),
         'answers' => $answers,
         'resume' => $resume,
         'files' => $files,
@@ -154,11 +155,46 @@ function applications_offer(int $id): void
 function applications_owner(int $id): void
 {
     application_full($id) ?? abort(404);
+    $app = application_full($id);
     $owner = input_int('owner_id') ?: null;
     db()->update('applications', ['owner_id' => $owner, 'updated_at' => now()], 'id = ?', [$id]);
+    if ($owner && $app) {
+        notify([$owner], 'Candidate assigned to you: ' . candidate_name($app), admin_url('applications/' . $id), $app['job_title'], 'user-plus');
+    }
     log_activity('application', $id, 'updated', $owner ? 'Owner set to ' . user_name($owner) : 'Owner removed');
     flash('success', 'Owner updated.');
     redirect(admin_url('applications/' . $id));
+}
+
+/** Move several applications at once from the candidates list. */
+function applications_bulk(): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', input_array('ids')))));
+    $stageId = input_int('stage_id');
+    $stage = ats_stages()[$stageId] ?? null;
+    if (!$ids || !$stage) {
+        flash('error', 'Tick at least one candidate and choose a stage.');
+        back(admin_url('candidates'));
+    }
+    $reason = input('reason');
+    $done = 0;
+    $emailed = 0;
+    foreach ($ids as $id) {
+        $app = application_full($id);
+        if (!$app || !application_move($id, $stageId, $reason)) {
+            continue;
+        }
+        $done++;
+        if ($stage['kind'] === 'rejected' && input('notify') === '1') {
+            [$ok, $subject, $body] = send_template('application_rejected', (string) $app['email'], candidate_vars($app), ['to_name' => candidate_name($app), 'reply_to' => (string) auth_user()['email']]);
+            if ($ok) {
+                log_activity('application', $id, 'email', 'Email sent: ' . $subject, $body);
+                $emailed++;
+            }
+        }
+    }
+    flash($done ? 'success' : 'info', $done ? plural($done, 'candidate') . ' moved to ' . $stage['name'] . ($emailed ? ', ' . $emailed . ' emailed' : '') . '.' : 'Nothing changed.');
+    back(admin_url('candidates'));
 }
 
 /* ------------------------------------------------------------------ hiring pipeline board */

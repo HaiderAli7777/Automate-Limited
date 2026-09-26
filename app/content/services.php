@@ -1,0 +1,208 @@
+<?php
+/*
+ * The six services. Used by the homepage explorer, /services/ and each
+ * service page (/services/{slug}). 'art' is ready-made HTML (an image or the
+ * animated Odoo diagram) and must stay trusted content written here.
+ */
+declare(strict_types=1);
+
+return [
+    'odoo-erp' => [
+        'noun' => 'Odoo ERP',
+        'project' => 'an Odoo project',
+        'key' => 'odoo',
+        'name' => 'Odoo ERP',
+        'icon' => 'erp',
+        'line' => 'Implementation, custom modules, migration and support',
+        'title' => 'Odoo ERP implementation, migration and support',
+        'meta' => 'Odoo ERP implementation, migration from older versions, custom modules and support, with tax set up for UAE, KSA and Pakistan.',
+        'lede' => 'One system for accounts, stock, sales, purchasing, manufacturing and payroll, set up around how your business actually works.',
+        'kicker' => 'Odoo 17, 18 and 19, on your server or ours',
+        'headline' => 'Standard Odoo first, every time.',
+        'desc' => 'Customization is only what\'s left once the default has been proven not to fit. Two weeks of scoping come before any configuration, and your old system runs alongside until the numbers agree.',
+        'spec' => ['Chart of accounts and tax set up for UAE, KSA and Pakistan', 'Stock flows mapped before a single screen is configured', 'QWeb invoices and statements on your letterhead', 'Migrations from 15, 16 and 17 with the ledger intact'],
+        'included' => ['Process mapping workshops with each department', 'Configuration of standard modules before any custom code', 'Data migration with a reconciliation you can check', 'User training, written guides and a handover session'],
+        'outcomes' => [
+            ['One set of numbers', 'Sales, stock and the ledger update together, so nobody reconciles spreadsheets at month end.'],
+            ['A date you can plan around', 'The go-live date is written into the scope you sign, before any configuration starts.'],
+            ['No leap in the dark', 'Your old system keeps running beside Odoo until the trial balances match.'],
+        ],
+        'steps' => [
+            ['Scope', 'Two weeks with finance, stores and sales. You sign off what happens today, workarounds included.'],
+            ['Configure', 'Standard Odoo first. Anything custom is quoted separately and only where the default falls short.'],
+            ['Migrate', 'Master data and opening balances move under a reconciliation, with both systems running side by side.'],
+            ['Support', 'A named consultant, an agreed response time and a quarterly review of what is still done by hand.'],
+        ],
+        'faq' => 'odoo',
+        'related' => ['custom', 'web', 'design'],
+        'art_class' => 'svx__art svx__art--loop',
+        'art' => <<<'HTML'
+<svg class="fl-d" viewBox="0 0 640 400" role="img" aria-label="One sale moving through Odoo: it rings up at the counter, updates stock, posts an invoice to the ledger and moves the dashboard"><path class="fl-loop" d="M320 70 A220 130 0 0 1 540 200 A220 130 0 0 1 320 330 A220 130 0 0 1 100 200 A220 130 0 0 1 320 70 Z"/><path class="fl-pulse" pathLength="100" d="M320 70 A220 130 0 0 1 540 200 A220 130 0 0 1 320 330 A220 130 0 0 1 100 200 A220 130 0 0 1 320 70 Z"/><text class="fl-mid" x="320" y="198" text-anchor="middle">Entered once.</text><text class="fl-mid2" x="320" y="224" text-anchor="middle">Recorded everywhere it belongs.</text><g class="fl-node" transform="translate(320 70)" style="--at:0s"><rect x="-96" y="-32" width="192" height="64" rx="14"/><rect class="fl-ring" x="-96" y="-32" width="192" height="64" rx="14"/><use href="#i-pos" x="-80" y="-12" width="24" height="24"/><text class="fl-t" x="-46" y="-3">A sale rings up</text><text class="fl-s" x="-46" y="15">at the counter</text></g><g class="fl-node" transform="translate(540 200)" style="--at:1.2s"><rect x="-96" y="-32" width="192" height="64" rx="14"/><rect class="fl-ring" x="-96" y="-32" width="192" height="64" rx="14"/><use href="#i-inventory" x="-80" y="-12" width="24" height="24"/><text class="fl-t" x="-46" y="-3">Stock updates</text><text class="fl-s" x="-46" y="15">in the warehouse</text></g><g class="fl-node" transform="translate(320 330)" style="--at:2.4s"><rect x="-96" y="-32" width="192" height="64" rx="14"/><rect class="fl-ring" x="-96" y="-32" width="192" height="64" rx="14"/><use href="#i-receipt" x="-80" y="-12" width="24" height="24"/><text class="fl-t" x="-46" y="-3">Invoice posts</text><text class="fl-s" x="-46" y="15">to the ledger</text></g><g class="fl-node" transform="translate(100 200)" style="--at:3.6s"><rect x="-96" y="-32" width="192" height="64" rx="14"/><rect class="fl-ring" x="-96" y="-32" width="192" height="64" rx="14"/><use href="#i-chart" x="-80" y="-12" width="24" height="24"/><text class="fl-t" x="-46" y="-3">Dashboard moves</text><text class="fl-s" x="-46" y="15">on your phone</text></g></svg><svg class="fl-m" viewBox="0 0 360 420" role="img" aria-label="One sale moving through Odoo: it rings up at the counter, updates stock, posts an invoice and moves the dashboard"><path class="fl-loop" d="M180 62 L180 350"/><path class="fl-pulse fl-pulse--m" pathLength="100" d="M180 62 L180 350"/><g class="fl-node" transform="translate(180 62)" style="--at:0.0s"><rect x="-136" y="-32" width="272" height="64" rx="14"/><rect class="fl-ring" x="-136" y="-32" width="272" height="64" rx="14"/><use href="#i-pos" x="-116" y="-13" width="26" height="26"/><text class="fl-t fl-t--m" x="-76" y="-3">A sale rings up</text><text class="fl-s fl-s--m" x="-76" y="17">at the counter</text></g><g class="fl-node" transform="translate(180 158)" style="--at:1.2s"><rect x="-136" y="-32" width="272" height="64" rx="14"/><rect class="fl-ring" x="-136" y="-32" width="272" height="64" rx="14"/><use href="#i-inventory" x="-116" y="-13" width="26" height="26"/><text class="fl-t fl-t--m" x="-76" y="-3">Stock updates</text><text class="fl-s fl-s--m" x="-76" y="17">in the warehouse</text></g><g class="fl-node" transform="translate(180 254)" style="--at:2.4s"><rect x="-136" y="-32" width="272" height="64" rx="14"/><rect class="fl-ring" x="-136" y="-32" width="272" height="64" rx="14"/><use href="#i-receipt" x="-116" y="-13" width="26" height="26"/><text class="fl-t fl-t--m" x="-76" y="-3">Invoice posts</text><text class="fl-s fl-s--m" x="-76" y="17">to the ledger</text></g><g class="fl-node" transform="translate(180 350)" style="--at:3.5999999999999996s"><rect x="-136" y="-32" width="272" height="64" rx="14"/><rect class="fl-ring" x="-136" y="-32" width="272" height="64" rx="14"/><use href="#i-chart" x="-116" y="-13" width="26" height="26"/><text class="fl-t fl-t--m" x="-76" y="-3">Dashboard moves</text><text class="fl-s fl-s--m" x="-76" y="17">on your phone</text></g><text class="fl-mid2" x="180" y="408" text-anchor="middle">Entered once. Recorded everywhere.</text></svg>
+HTML,
+    ],
+    'website-development' => [
+        'noun' => 'your website',
+        'project' => 'a website project',
+        'key' => 'web',
+        'name' => 'Website development',
+        'icon' => 'web',
+        'line' => 'Sites and storefronts your team can run',
+        'title' => 'Website development and Odoo eCommerce',
+        'meta' => 'Fast, editable websites and Odoo eCommerce storefronts in English and Arabic, built for your team to run after launch.',
+        'lede' => 'Marketing sites, storefronts and landing pages that load fast, rank well and stay easy for your own team to update.',
+        'kicker' => 'Marketing sites, storefronts and landing pages',
+        'headline' => 'Fast, editable and yours to change.',
+        'desc' => 'If your catalogue and stock live in Odoo, the storefront runs on Odoo eCommerce so the two never disagree. If you only need a site that loads fast and ranks, it doesn\'t need a database behind it.',
+        'spec' => ['Design and build, or a rebuild of what you have', 'Odoo eCommerce wired to live stock and prices', 'English and Arabic, with right-to-left done properly', 'A written guide for whoever edits it after us'],
+        'included' => ['Sitemap, wireframes and design in your brand', 'Build on the right platform for the job', 'Content migration and redirects from the old site', 'Analytics, search console and enquiry tracking'],
+        'outcomes' => [
+            ['Edited by your team', 'Prices, photos and pages change without a support ticket, with a written guide to hand.'],
+            ['Built to be found', 'Clean structure, fast pages and structured data from day one, not bolted on later.'],
+            ['Selling from live stock', 'With Odoo eCommerce, the storefront and the warehouse read from the same records.'],
+        ],
+        'steps' => [
+            ['Brief', 'What the site has to do, who it is for and how you will measure it.'],
+            ['Design', 'Key pages designed and signed off before the build begins.'],
+            ['Build', 'Development, content entry, redirects and testing on phones and desktops.'],
+            ['Launch', 'Go live, then training and a written guide for whoever edits it.'],
+        ],
+        'faq' => 'web',
+        'related' => ['seo', 'marketing', 'design'],
+        'art_class' => 'svx__art',
+        'art' => <<<'HTML'
+<img src="https://images.unsplash.com/photo-1636247497842-81ee9c80f9df?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5" srcset="https://images.unsplash.com/photo-1636247497842-81ee9c80f9df?auto=format&amp;fit=crop&amp;w=720&amp;h=450&amp;q=72&amp;sat=-12&amp;con=5 720w, https://images.unsplash.com/photo-1636247497842-81ee9c80f9df?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5 1200w, https://images.unsplash.com/photo-1636247497842-81ee9c80f9df?auto=format&amp;fit=crop&amp;w=1920&amp;h=1200&amp;q=72&amp;sat=-12&amp;con=5 1920w" sizes="(min-width: 900px) 58vw, 92vw" width="1200" height="750" alt="Two phones side by side showing a mobile interface" loading="lazy" decoding="async">
+HTML,
+    ],
+    'seo' => [
+        'noun' => 'SEO',
+        'project' => 'an SEO engagement',
+        'key' => 'seo',
+        'name' => 'SEO',
+        'icon' => 'seo',
+        'line' => 'Technical fixes and local search',
+        'title' => 'SEO: technical, on-page and local search',
+        'meta' => 'Technical SEO audits, keyword mapping, local listings for UAE, KSA and Pakistan, and monthly reporting on rankings and enquiries.',
+        'lede' => 'We fix what is broken underneath first, then build the pages and local listings that reach buyers ready to order.',
+        'kicker' => 'Technical, on-page and local search',
+        'headline' => 'Found by buyers in your market.',
+        'desc' => 'A buyer in Sharjah searching for your product is a different problem from a buyer in Lahore. We fix what\'s broken underneath first, then build the pages and local listings that reach people ready to order.',
+        'spec' => ['Technical audit of crawling, indexing, speed and structured data', 'Keyword mapping against how your buyers actually search', 'Google Business Profile for UAE, KSA and Pakistan', 'Monthly reporting on rankings, traffic and enquiries'],
+        'included' => ['Technical audit with a prioritised fix list', 'Keyword and competitor research per market', 'On-page improvements and new landing pages', 'Google Business Profile set-up and upkeep'],
+        'outcomes' => [
+            ['Crawlable and fast', 'Indexing, speed and structured data issues fixed before any content work starts.'],
+            ['Pages that match searches', 'Each page is mapped to how your buyers actually search, market by market.'],
+            ['Reported in enquiries', 'Monthly reports show rankings and traffic, and the enquiries they produced.'],
+        ],
+        'steps' => [
+            ['Audit', 'Crawl, speed and index checks, plus a look at who ranks where and why.'],
+            ['Fix', 'Technical issues first, because content cannot rank on a broken foundation.'],
+            ['Build', 'Pages, internal links and local listings mapped to real searches.'],
+            ['Report', 'A monthly report on rankings, traffic and the enquiries behind them.'],
+        ],
+        'faq' => 'seo',
+        'related' => ['web', 'marketing', 'design'],
+        'art_class' => 'svx__art',
+        'art' => <<<'HTML'
+<img src="https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&amp;fit=crop&amp;crop=faces,edges&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5" srcset="https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&amp;fit=crop&amp;crop=faces,edges&amp;w=720&amp;h=450&amp;q=72&amp;sat=-12&amp;con=5 720w, https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&amp;fit=crop&amp;crop=faces,edges&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5 1200w, https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&amp;fit=crop&amp;crop=faces,edges&amp;w=1920&amp;h=1200&amp;q=72&amp;sat=-12&amp;con=5 1920w" sizes="(min-width: 900px) 58vw, 92vw" width="1200" height="750" alt="A woman searching on her phone" loading="lazy" decoding="async">
+HTML,
+    ],
+    'digital-marketing' => [
+        'noun' => 'digital marketing',
+        'project' => 'a campaign',
+        'key' => 'marketing',
+        'name' => 'Digital marketing',
+        'icon' => 'marketing',
+        'line' => 'Paid campaigns measured on enquiries',
+        'title' => 'Digital marketing: paid search and paid social',
+        'meta' => 'Google Ads, Meta, TikTok and LinkedIn campaigns with tracking set up first and results reported as enquiries, not impressions.',
+        'lede' => 'Paid search and paid social with the tracking in place first, judged on the enquiries they bring in.',
+        'kicker' => 'Paid search, paid social and the tracking under both',
+        'headline' => 'Judged on enquiries, not impressions.',
+        'desc' => 'Tracking goes in before any money is spent. We agree what a good month looks like in numbers first, and if a channel isn\'t returning, we say so instead of asking for more budget.',
+        'spec' => ['Google Ads across search, Performance Max and remarketing', 'Meta, TikTok and LinkedIn campaigns built by audience', 'Landing pages made for the campaign, not the homepage', 'One agreed number, reported every month'],
+        'included' => ['Tracking and conversion set-up across platforms', 'Campaign structure, audiences and ad copy', 'Landing pages for each campaign', 'Monthly reporting and budget recommendations'],
+        'outcomes' => [
+            ['Tracking before spend', 'Conversions are measured properly before the first campaign goes live.'],
+            ['Honest reporting', 'One agreed number each month. If a channel is not returning, we say so.'],
+            ['Pages built to convert', 'Campaign landing pages that match the ad, not a link to the homepage.'],
+        ],
+        'steps' => [
+            ['Measure', 'Tracking, goals and a baseline agreed before any money is spent.'],
+            ['Launch', 'Campaigns built by audience, with landing pages made for them.'],
+            ['Optimise', 'Weekly changes to bids, audiences and creative based on results.'],
+            ['Report', 'One agreed number each month, and what we will change next.'],
+        ],
+        'faq' => 'marketing',
+        'related' => ['seo', 'web', 'design'],
+        'art_class' => 'svx__art',
+        'art' => <<<'HTML'
+<img src="https://images.unsplash.com/photo-1762525984874-83d6ddf6a069?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5" srcset="https://images.unsplash.com/photo-1762525984874-83d6ddf6a069?auto=format&amp;fit=crop&amp;w=720&amp;h=450&amp;q=72&amp;sat=-12&amp;con=5 720w, https://images.unsplash.com/photo-1762525984874-83d6ddf6a069?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5 1200w, https://images.unsplash.com/photo-1762525984874-83d6ddf6a069?auto=format&amp;fit=crop&amp;w=1920&amp;h=1200&amp;q=72&amp;sat=-12&amp;con=5 1920w" sizes="(min-width: 900px) 58vw, 92vw" width="1200" height="750" alt="Two large billboards mounted on a concrete wall" loading="lazy" decoding="async">
+HTML,
+    ],
+    'graphic-design' => [
+        'noun' => 'design work',
+        'project' => 'a design project',
+        'key' => 'design',
+        'name' => 'Graphic design',
+        'icon' => 'design',
+        'line' => 'Identity, print and packaging',
+        'title' => 'Graphic design: brand, print and packaging',
+        'meta' => 'Logo and brand identity, catalogues, packaging, signage and invoice layouts that match Odoo, with editable source files handed over.',
+        'lede' => 'The logo, the catalogue your sales team hands over and the label on the box, designed to work together.',
+        'kicker' => 'Brand, print, packaging and signage',
+        'headline' => 'What people see before they see the system.',
+        'desc' => 'The logo, the catalogue your sales team hands over, the label on the box. Editable source files come to you at the end, so you\'re never tied to us for a colour change.',
+        'spec' => ['Logo and brand identity with usage guidelines', 'Catalogues, price lists and brochures', 'Packaging, labels and retail signage', 'Letterheads and invoice layouts that match Odoo'],
+        'included' => ['Logo, colour and type system with guidelines', 'Stationery, invoices and quotation layouts', 'Catalogues, brochures and price lists', 'Packaging, labels and retail signage'],
+        'outcomes' => [
+            ['A consistent brand', 'Guidelines that keep every document, screen and sign looking like one company.'],
+            ['Files you own', 'Editable source files are handed over at the end, so you are never tied to us.'],
+            ['Matches your system', 'Invoice and quotation layouts designed to drop straight into Odoo.'],
+        ],
+        'steps' => [
+            ['Brief', 'Who you sell to, what you want to be known for and where the brand appears.'],
+            ['Concepts', 'Two or three directions, presented with real examples of use.'],
+            ['Refine', 'One direction taken through to every item on the list.'],
+            ['Handover', 'Print-ready files, editable sources and a short set of guidelines.'],
+        ],
+        'faq' => 'design',
+        'related' => ['web', 'marketing', 'odoo'],
+        'art_class' => 'svx__art',
+        'art' => <<<'HTML'
+<img src="https://images.unsplash.com/photo-1636247499180-13285c86be9b?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5" srcset="https://images.unsplash.com/photo-1636247499180-13285c86be9b?auto=format&amp;fit=crop&amp;w=720&amp;h=450&amp;q=72&amp;sat=-12&amp;con=5 720w, https://images.unsplash.com/photo-1636247499180-13285c86be9b?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5 1200w, https://images.unsplash.com/photo-1636247499180-13285c86be9b?auto=format&amp;fit=crop&amp;w=1920&amp;h=1200&amp;q=72&amp;sat=-12&amp;con=5 1920w" sizes="(min-width: 900px) 58vw, 92vw" width="1200" height="750" alt="A bound brand guidelines book" loading="lazy" decoding="async">
+HTML,
+    ],
+    'custom-solutions' => [
+        'noun' => 'a custom build',
+        'project' => 'a custom build',
+        'key' => 'custom',
+        'name' => 'Custom solutions',
+        'icon' => 'custom',
+        'line' => 'Integrations and internal tools',
+        'title' => 'Custom solutions: Odoo modules, integrations and tools',
+        'meta' => 'Custom Odoo modules, integrations with banks, couriers and marketplaces, data migration and dashboards, documented for handover.',
+        'lede' => 'For the part of your operation no product covers: modules, integrations and tools built around your process.',
+        'kicker' => 'For the part no product covers',
+        'headline' => 'Built around the process that makes you money.',
+        'desc' => 'Every business has a piece of its operation that no off-the-shelf product handles. We build that piece and document it well enough that another developer could take it over tomorrow.',
+        'spec' => ['Odoo modules written for your process', 'Integrations with banks, couriers and marketplaces', 'Data migration out of any system, spreadsheets included', 'Dashboards for the numbers you check every day'],
+        'included' => ['Requirements written up and signed off first', 'Custom Odoo modules and QWeb reports', 'API integrations and scheduled data syncs', 'Tests, documentation and a handover session'],
+        'outcomes' => [
+            ['Fits the process', 'Built around the way your team works, after standard options are ruled out.'],
+            ['Connected systems', 'Banks, couriers and marketplaces talk to Odoo without re-typing.'],
+            ['Documented properly', 'Code and decisions written down so another developer could take over.'],
+        ],
+        'steps' => [
+            ['Specify', 'What it must do, who uses it and how we will know it works.'],
+            ['Build', 'Short cycles with working software you can try along the way.'],
+            ['Test', 'Tested with your data and your people before it goes live.'],
+            ['Hand over', 'Documentation, source code and support for as long as you need it.'],
+        ],
+        'faq' => 'custom',
+        'related' => ['odoo', 'web', 'seo'],
+        'art_class' => 'svx__art',
+        'art' => <<<'HTML'
+<img src="https://images.unsplash.com/photo-1630524274689-2950ac0fc91e?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5" srcset="https://images.unsplash.com/photo-1630524274689-2950ac0fc91e?auto=format&amp;fit=crop&amp;w=720&amp;h=450&amp;q=72&amp;sat=-12&amp;con=5 720w, https://images.unsplash.com/photo-1630524274689-2950ac0fc91e?auto=format&amp;fit=crop&amp;w=1200&amp;h=750&amp;q=72&amp;sat=-12&amp;con=5 1200w, https://images.unsplash.com/photo-1630524274689-2950ac0fc91e?auto=format&amp;fit=crop&amp;w=1920&amp;h=1200&amp;q=72&amp;sat=-12&amp;con=5 1920w" sizes="(min-width: 900px) 58vw, 92vw" width="1200" height="750" alt="A monitor full of code on a developer's desk" loading="lazy" decoding="async">
+HTML,
+    ],
+];

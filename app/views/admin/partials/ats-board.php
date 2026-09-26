@@ -10,13 +10,16 @@ foreach ($apps as $a) {
         $byStage[(int) $a['stage_id']][] = $a;
     }
 }
+$canMove = user_can('ats.manage');
 $stageOptions = '';
 foreach ($stages as $s) {
     $stageOptions .= '<option value="' . (int) $s['id'] . '">' . e($s['name']) . '</option>';
 }
 ?>
+<?php if (!$canMove): ?><p class="board-note"><?= icon('eye', 'ic ic--sm') ?> View only. Your access doesn't include moving candidates.</p><?php else: ?>
 <p class="board-note">Drag a card to move it. Moving someone to <?= e(implode(' or ', array_column(array_filter($stages, static fn ($s) => $s['kind'] === 'rejected'), 'name')) ?: 'a rejected stage') ?> asks for a reason.</p>
-<div class="board" data-board data-move-url="<?= e(admin_url('applications/{id}/stage')) ?>" data-reason-dialog="rejectDialog">
+<?php endif; ?>
+<div class="board<?= $canMove ? '' : ' board--readonly' ?>"<?= $canMove ? ' data-board' : '' ?> data-move-url="<?= e(admin_url('applications/{id}/stage')) ?>" data-reason-dialog="rejectDialog">
   <?php foreach ($stages as $sid => $s): $cards = $byStage[$sid]; ?>
     <section class="bcol" style="--dot:<?= stage_dot($s['color']) ?>" aria-label="<?= e($s['name']) ?>">
       <header class="bcol__head"><span class="bcol__dot"></span><h3 class="bcol__name"><?= e($s['name']) ?></h3><span class="bcol__count"><?= count($cards) ?></span></header>
@@ -39,7 +42,7 @@ foreach ($stages as $s) {
               <?php if (!empty($a['avg_rating'])): ?><span title="Average interview score"><?= icon('star') ?><?= e(number_format((float) $a['avg_rating'], 1)) ?></span><?php endif; ?>
               <?php if (!empty($a['next_interview'])): ?><span title="Next interview"><?= icon('calendar-dots') ?><?= e(fmt_day($a['next_interview'])) ?></span><?php endif; ?>
             </div>
-            <div class="kcard__move"><select class="select" aria-label="Move <?= e($name) ?> to stage"><?= str_replace('value="' . $sid . '"', 'value="' . $sid . '" selected', $stageOptions) ?></select></div>
+            <?php if ($canMove): ?><div class="kcard__move"><select class="select" aria-label="Move <?= e($name) ?> to stage"><?= str_replace('value="' . $sid . '"', 'value="' . $sid . '" selected', $stageOptions) ?></select></div><?php endif; ?>
           </article>
         <?php endforeach; ?>
       </div>
@@ -47,6 +50,7 @@ foreach ($stages as $s) {
   <?php endforeach; ?>
 </div>
 
+<?php if ($canMove): ?>
 <dialog class="modal" id="rejectDialog" aria-labelledby="rejectTitle">
   <form method="dialog">
     <div class="modal__head"><h2 id="rejectTitle">Why isn't this moving forward?</h2></div>
@@ -57,3 +61,4 @@ foreach ($stages as $s) {
     <div class="modal__foot"><button class="btn btn--ghost" type="button" data-close-dialog>Cancel</button><button class="btn btn--primary" type="submit">Move</button></div>
   </form>
 </dialog>
+<?php endif; ?>

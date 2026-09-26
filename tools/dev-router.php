@@ -31,6 +31,10 @@ if (preg_match('#^/careers/([a-z0-9-]+)/?$#', $path, $m)) {
     $_GET['job'] = $m[1];
     return $run('careers/index.php');
 }
+if (preg_match('#^/services/([a-z0-9-]+)/?$#', $path, $m)) {
+    $_GET['s'] = $m[1];
+    return $run('services/index.php');
+}
 if (preg_match('#^/admin(/.*)?$#', $path) && !is_file($root . $path)) {
     return $run('admin/index.php');
 }

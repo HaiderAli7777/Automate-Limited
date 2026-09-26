@@ -5,11 +5,11 @@ declare(strict_types=1);
 function contacts_index(): void
 {
     $q = input('q');
-    $where = '';
+    $where = ' WHERE 1 = 1' . contact_scope('c');
     $params = [];
     if ($q !== '') {
         $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
-        $where = ' WHERE c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ? OR c.phone LIKE ?';
+        $where .= ' AND (c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ? OR c.phone LIKE ?)';
         $params = [$like, $like, $like, $like];
     }
     $p = paginate((int) db()->value('SELECT COUNT(*) FROM contacts c' . $where, $params), 30);
@@ -32,15 +32,15 @@ function contacts_form(): void
 
 function contacts_show(int $id): void
 {
-    $contact = db()->one('SELECT * FROM contacts WHERE id = ?', [$id]) ?? abort(404);
-    $leads = db()->all('SELECT * FROM leads WHERE contact_id = ? ORDER BY created_at DESC', [$id]);
+    $contact = db()->one('SELECT * FROM contacts c WHERE c.id = ?' . contact_scope('c'), [$id]) ?? abort(404);
+    $leads = db()->all('SELECT * FROM leads WHERE contact_id = ?' . crm_scope() . ' ORDER BY created_at DESC', [$id]);
     $timeline = activities_for([['contact', [$id]], ['lead', array_map('intval', array_column($leads, 'id'))]], 100);
     admin_view('contacts/show', ['title' => $contact['name'], 'nav' => 'contacts', 'contact' => $contact, 'leads' => $leads, 'timeline' => $timeline, 'tasks' => open_tasks_for('contact', $id)]);
 }
 
 function contacts_save(int $id = 0): void
 {
-    $contact = $id ? (db()->one('SELECT * FROM contacts WHERE id = ?', [$id]) ?? abort(404)) : null;
+    $contact = $id ? (db()->one('SELECT * FROM contacts c WHERE c.id = ?' . contact_scope('c'), [$id]) ?? abort(404)) : null;
     $errors = [];
     $email = strtolower(input('email'));
     $data = [

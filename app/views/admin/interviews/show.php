@@ -14,7 +14,7 @@ $submitted = array_map('intval', array_column($feedback, 'user_id'));
     <a class="btn btn--quiet" href="<?= e(admin_url('interviews/' . $iv['id'] . '/ics')) ?>"><?= icon('calendar-plus') ?>Add to calendar</a>
     <?php if ($iv['meeting_url']): ?><a class="btn btn--quiet" href="<?= e($iv['meeting_url']) ?>" target="_blank" rel="noopener noreferrer"><?= icon('video-camera') ?>Join call</a><?php endif; ?>
     <a class="btn btn--quiet" href="<?= e(admin_url('applications/' . $iv['application_id'])) ?>"><?= icon('identification-card') ?>Application</a>
-    <?php if (user_can('ats')): ?>
+    <?php if (user_can('ats.manage')): ?>
       <a class="btn btn--primary" href="<?= e(admin_url('interviews/' . $iv['id'] . '/edit')) ?>"><?= icon('pencil-simple') ?>Edit or reschedule</a>
       <details class="dropdown">
         <summary class="btn btn--quiet btn--icon" aria-label="More actions"><?= icon('dots-three') ?></summary>
@@ -109,7 +109,7 @@ $submitted = array_map('intval', array_column($feedback, 'user_id'));
   </div>
 </div>
 
-<?php if (user_can('ats')): ?>
+<?php if (user_can('ats.manage')): ?>
 <dialog class="modal" id="cancelDialog" aria-labelledby="cancelTitle">
   <form method="post" action="<?= e(admin_url('interviews/' . $iv['id'] . '/status')) ?>">
     <?= csrf_field() ?><input type="hidden" name="status" value="cancelled">

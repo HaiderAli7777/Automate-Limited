@@ -45,14 +45,25 @@ $described = static fn (string $k): string => isset($errors[$k]) ? ' aria-invali
       <input class="inp" id="cf-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" value="<?= $val('phone') ?>">
     </div>
   </div>
-  <div class="fld" data-field="service">
-    <label for="cf-service">What do you need help with?</label>
-    <select class="inp" id="cf-service" name="service">
-      <?php foreach ($services as $s): ?>
-        <option<?= selected($values['service'] ?? '', $s) ?>><?= e($s) ?></option>
-      <?php endforeach; ?>
-      <option value="Not sure yet"<?= selected($values['service'] ?? '', 'Not sure yet') ?>>Not sure yet</option>
-    </select>
+  <div class="form__row">
+    <div class="fld" data-field="service">
+      <label for="cf-service">What do you need help with?</label>
+      <select class="inp" id="cf-service" name="service" data-service-select>
+        <?php foreach ($services as $s): ?>
+          <option<?= selected($values['service'] ?? '', $s) ?>><?= e($s) ?></option>
+        <?php endforeach; ?>
+        <option value="Not sure yet"<?= selected($values['service'] ?? '', 'Not sure yet') ?>>Not sure yet</option>
+      </select>
+    </div>
+    <div class="fld" data-field="module" data-module-field>
+      <label for="cf-module">Odoo module <span class="opt">(optional)</span></label>
+      <select class="inp" id="cf-module" name="module">
+        <option value="">Several, or not sure</option>
+        <?php foreach (site_modules() as $m): ?>
+          <option<?= selected($values['module'] ?? '', $m['name']) ?>><?= e($m['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
   </div>
   <div class="<?= $cls('message') ?>" data-field="message">
     <label for="cf-message">What's going on?</label>

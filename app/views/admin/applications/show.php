@@ -26,8 +26,10 @@ foreach ($interviews as $iv) {
   </div>
   <?php if ($full): ?>
   <div class="profile__actions">
+    <?php if ($edit): ?>
     <button class="btn btn--quiet" type="button" data-open-dialog="emailDialog"><?= icon('envelope-simple') ?>Email</button>
     <a class="btn btn--primary" href="<?= e(admin_url('interviews/new') . '?application=' . $app['id']) ?>"><?= icon('calendar-plus') ?>Schedule interview</a>
+    <?php else: ?><span class="chip"><?= icon('eye') ?>View only</span><?php endif; ?>
     <a class="btn btn--ghost" href="<?= e(admin_url('candidates/' . $app['candidate_id'])) ?>">Full profile</a>
   </div>
   <?php endif; ?>
@@ -41,7 +43,9 @@ foreach ($interviews as $iv) {
         $cls = ($isCurrent ? 'is-current' : ($reached && $s['kind'] === 'active' ? 'is-done' : '')) . ($s['kind'] === 'rejected' ? ' is-negative' : ($s['kind'] === 'hired' ? ' is-positive' : ''));
         if ($isCurrent) { $reached = false; }
     ?>
-      <?php if ($s['kind'] === 'rejected' && !$isCurrent): ?>
+      <?php if (!$edit): ?>
+        <button type="button" class="<?= e($cls) ?>" disabled<?= $isCurrent ? ' aria-current="step"' : '' ?>><?= e($s['name']) ?></button>
+      <?php elseif ($s['kind'] === 'rejected' && !$isCurrent): ?>
         <button type="button" class="<?= e($cls) ?>" data-open-dialog="rejectOneDialog" data-stage="<?= (int) $sid ?>"><?= e($s['name']) ?></button>
       <?php else: ?>
         <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/stage')) ?>"><?= csrf_field() ?><input type="hidden" name="stage_id" value="<?= (int) $sid ?>">
@@ -79,7 +83,7 @@ foreach ($interviews as $iv) {
     <?php endif; ?>
 
     <div class="panel">
-      <div class="panel__head"><h2>Interviews</h2><?php if ($full): ?><a class="btn btn--quiet btn--sm" href="<?= e(admin_url('interviews/new') . '?application=' . $app['id']) ?>"><?= icon('calendar-plus') ?>Schedule</a><?php endif; ?></div>
+      <div class="panel__head"><h2>Interviews</h2><?php if ($edit): ?><a class="btn btn--quiet btn--sm" href="<?= e(admin_url('interviews/new') . '?application=' . $app['id']) ?>"><?= icon('calendar-plus') ?>Schedule</a><?php endif; ?></div>
       <?php if (!$interviews): ?>
         <div class="empty empty--sm"><p>No interviews yet.</p></div>
       <?php else: ?>
@@ -133,11 +137,11 @@ foreach ($interviews as $iv) {
           <dt>Interview score</dt><dd><?= stars($summary['avg']) ?><?= $summary['count'] ? ' <span class="muted small">from ' . plural($summary['count'], 'scorecard') . '</span>' : '' ?></dd>
           <?php if ($recCounts): ?><dt>Recommendations</dt><dd><div class="chips"><?php foreach (RECOMMENDATIONS as $k => $label): if (empty($recCounts[$k])) continue; ?><?= badge($label . ' ' . $recCounts[$k], RECOMMENDATION_COLORS[$k], 'badge--plain') ?><?php endforeach; ?></div></dd><?php endif; ?>
         </dl>
-        <?php if ($full): ?>
+        <?php if ($edit): ?>
         <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/owner')) ?>" class="row" style="margin-top:16px" data-autosubmit>
           <?= csrf_field() ?>
           <label class="small muted" for="owner">Owner</label>
-          <select class="select select--sm" id="owner" name="owner_id" style="flex:1"><?= user_options(isset($app['owner_id']) ? (int) $app['owner_id'] : null, 'Nobody', ['admin', 'manager', 'recruiter']) ?></select>
+          <select class="select select--sm" id="owner" name="owner_id" style="flex:1"><?= user_options(isset($app['owner_id']) ? (int) $app['owner_id'] : null, 'Nobody', 'ats.manage') ?></select>
           <noscript><button class="btn btn--quiet btn--sm" type="submit">Save</button></noscript>
         </form>
         <?php endif; ?>
@@ -156,7 +160,7 @@ foreach ($interviews as $iv) {
       </dl></div>
     </div>
 
-    <?php if ($full): ?>
+    <?php if ($edit): ?>
     <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/offer')) ?>" class="panel">
       <?= csrf_field() ?>
       <div class="panel__head"><h2>Offer</h2><?= $app['offer_status'] ? badge(OFFER_STATUSES[$app['offer_status']] ?? '', ['draft' => 'slate', 'sent' => 'blue', 'accepted' => 'green', 'declined' => 'red'][$app['offer_status']] ?? 'slate') : '' ?></div>
@@ -171,10 +175,10 @@ foreach ($interviews as $iv) {
         <div><button class="btn btn--quiet btn--sm" type="submit">Save offer</button></div>
       </div>
     </form>
-    <?php partial('admin/partials/tasks-panel', ['entityType' => 'application', 'entityId' => (int) $app['id'], 'tasks' => $tasks]); ?>
     <?php endif; ?>
+    <?php if ($full) partial('admin/partials/tasks-panel', ['entityType' => 'application', 'entityId' => (int) $app['id'], 'tasks' => $tasks]); ?>
 
-    <?php partial('admin/partials/files-panel', ['files' => $files, 'uploadUrl' => $full ? admin_url('candidates/' . $app['candidate_id'] . '/files') : null]); ?>
+    <?php partial('admin/partials/files-panel', ['files' => $files, 'uploadUrl' => $edit ? admin_url('candidates/' . $app['candidate_id'] . '/files') : null]); ?>
 
     <?php if ($others && $full): ?>
     <div class="panel">
@@ -185,7 +189,7 @@ foreach ($interviews as $iv) {
   </div>
 </div>
 
-<?php if ($full): ?>
+<?php if ($edit): ?>
 <dialog class="modal modal--wide" id="emailDialog" aria-labelledby="emailTitle">
   <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/email')) ?>">
     <?= csrf_field() ?>

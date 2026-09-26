@@ -62,11 +62,12 @@ $link = static function (string $key, string $href, string $icon, string $label,
     </nav>
     <?php endif; ?>
 
-    <?php if (user_can('settings')): ?>
+    <?php if (user_can('team') || user_can('settings') || user_can('audit.view')): ?>
     <nav class="side__group" aria-label="Administration">
       <p class="side__label">Admin</p>
-      <?= $link('team', admin_url('team'), 'user-gear', 'Team') ?>
-      <?= $link('settings', admin_url('settings'), 'gear-six', 'Settings') ?>
+      <?php if (user_can('team')): ?><?= $link('team', admin_url('team'), 'user-gear', 'Team and access') ?><?php endif; ?>
+      <?php if (user_can('audit.view')): ?><?= $link('activity', admin_url('activity'), 'clock-counter-clockwise', 'Activity log') ?><?php endif; ?>
+      <?php if (user_can('settings')): ?><?= $link('settings', admin_url('settings'), 'gear-six', 'Settings') ?><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -82,26 +83,48 @@ $link = static function (string $key, string $href, string $icon, string $label,
       <button class="icon-btn top__menu" type="button" data-nav-toggle aria-controls="side" aria-expanded="false" aria-label="Open navigation"><?= icon('list') ?></button>
       <form class="search-box" action="<?= e(admin_url('search')) ?>" method="get" role="search">
         <?= icon('magnifying-glass') ?>
-        <input type="search" name="q" value="<?= e($nav === 'search' ? input('q') : '') ?>" placeholder="Search candidates, leads, contacts, jobs" aria-label="Search">
+        <input type="search" name="q" value="<?= e($nav === 'search' ? input('q') : '') ?>" placeholder="Search candidates, leads, contacts, jobs" aria-label="Search" aria-keyshortcuts="/"><kbd class="search-box__key" aria-hidden="true">/</kbd>
       </form>
       <div class="top__tools">
-        <?php if (user_can('ats') || user_can('crm')): ?>
         <details class="dropdown">
-          <summary class="btn btn--primary btn--sm"><?= icon('plus') ?>New</summary>
+          <summary class="btn btn--primary btn--sm"><?= icon('plus') ?><span class="hide-sm">New</span></summary>
           <div class="dropdown__menu">
-            <?php if (user_can('ats')): ?>
-              <a href="<?= e(admin_url('jobs/new')) ?>"><?= icon('briefcase') ?>Job</a>
+            <?php if (user_can('ats.manage')): ?>
+              <a href="<?= e(admin_url('jobs/new')) ?>"><?= icon('briefcase') ?>Job opening</a>
               <a href="<?= e(admin_url('candidates/new')) ?>"><?= icon('user-plus') ?>Candidate</a>
+              <a href="<?= e(admin_url('interviews/new')) ?>"><?= icon('calendar-plus') ?>Interview</a>
             <?php endif; ?>
-            <?php if (user_can('crm')): ?>
+            <?php if (user_can('crm.manage')): ?>
+              <?php if (user_can('ats.manage')): ?><div class="dropdown__sep"></div><?php endif; ?>
               <a href="<?= e(admin_url('leads/new')) ?>"><?= icon('funnel') ?>Lead</a>
               <a href="<?= e(admin_url('contacts/new')) ?>"><?= icon('address-book') ?>Contact</a>
+            <?php endif; ?>
+            <?php if (user_can('team')): ?>
+              <div class="dropdown__sep"></div>
+              <a href="<?= e(admin_url('team/new')) ?>"><?= icon('user-gear') ?>Team member</a>
             <?php endif; ?>
             <div class="dropdown__sep"></div>
             <a href="<?= e(admin_url('tasks')) ?>#new-task"><?= icon('check-square') ?>Task</a>
           </div>
         </details>
-        <?php endif; ?>
+        <?php $recent = recent_notifications(6); ?>
+        <details class="dropdown bell">
+          <summary class="icon-btn" aria-label="Notifications<?= $counts['notifications'] ? ', ' . $counts['notifications'] . ' unread' : '' ?>"><?= icon('bell') ?><?php if ($counts['notifications']): ?><span class="bell__count" data-notif-count><?= $counts['notifications'] > 9 ? '9+' : $counts['notifications'] ?></span><?php endif; ?></summary>
+          <div class="dropdown__menu bell__menu">
+            <div class="bell__head"><b>Notifications</b>
+              <?php if ($counts['notifications']): ?><form method="post" action="<?= e(admin_url('notifications/read-all')) ?>" data-read-all><?= csrf_field() ?><button type="submit" class="link small">Mark all as read</button></form><?php endif; ?>
+            </div>
+            <?php if (!$recent): ?>
+              <p class="bell__empty">You're all caught up. New applications, enquiries and anything assigned to you will show up here.</p>
+            <?php else: foreach ($recent as $n): ?>
+              <a class="notif<?= $n['read_at'] ? '' : ' is-unread' ?>" href="<?= e(admin_url('notifications/' . $n['id'] . '/open')) ?>">
+                <span class="notif__ic"><?= icon((string) ($n['icon'] ?: 'bell')) ?></span>
+                <span class="notif__main"><span class="notif__title"><?= e($n['title']) ?></span><?php if ($n['body']): ?><span class="notif__body"><?= e($n['body']) ?></span><?php endif; ?><span class="notif__when"><?= e(time_ago($n['created_at'])) ?></span></span>
+              </a>
+            <?php endforeach; endif; ?>
+            <a class="bell__all" href="<?= e(admin_url('notifications')) ?>">See all notifications</a>
+          </div>
+        </details>
         <button class="icon-btn" type="button" data-theme-toggle aria-label="Dark theme" aria-pressed="false"><?= icon('moon', 'ic ic--moon') ?><?= icon('sun', 'ic ic--sun') ?></button>
         <details class="dropdown usermenu">
           <summary aria-label="Account menu"><?= avatar((string) $me['name']) ?><span class="usermenu__text usermenu__name"><?= e($me['name']) ?><span class="usermenu__role"><?= e(role_label((string) $me['role'])) ?></span></span></summary>

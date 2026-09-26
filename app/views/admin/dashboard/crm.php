@@ -5,7 +5,7 @@ $stages = lead_stages();
 ?>
 <div class="phead">
   <div><h1>CRM dashboard</h1><p class="phead__sub">Enquiries, pipeline and what's been won, in <?= e($cur) ?>.</p></div>
-  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(admin_url('leads/board')) ?>"><?= icon('kanban') ?>Sales pipeline</a><a class="btn btn--primary" href="<?= e(admin_url('leads/new')) ?>"><?= icon('plus') ?>New lead</a></div>
+  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(admin_url('leads/board')) ?>"><?= icon('kanban') ?>Sales pipeline</a><?php if (user_can('crm.manage')): ?><a class="btn btn--primary" href="<?= e(admin_url('leads/new')) ?>"><?= icon('plus') ?>New lead</a><?php endif; ?></div>
 </div>
 <?= period_filter($p, 'dashboard/crm') ?>
 
@@ -30,15 +30,22 @@ $stages = lead_stages();
     <div class="panel__body"><?= chart_hbars($pipeRows, 'Stage', 'No open deals with a value yet.') ?></div>
   </div>
 
-  <div class="panel span-4">
+  <?php $w = !empty($topicRows) ? 'span-6' : 'span-4'; ?>
+  <div class="panel <?= $w ?>">
     <div class="panel__head"><h2>Lead sources</h2></div>
     <div class="panel__body"><?= chart_hbars($sourceRows, 'Source') ?></div>
   </div>
-  <div class="panel span-4">
+  <div class="panel <?= $w ?>">
     <div class="panel__head"><h2>What people ask for</h2></div>
     <div class="panel__body"><?= chart_hbars($serviceRows, 'Service') ?></div>
   </div>
-  <div class="panel span-4">
+  <?php if (!empty($topicRows)): ?>
+  <div class="panel span-6">
+    <div class="panel__head"><h2>Odoo modules asked about</h2><span class="muted">From the module pages on the website</span></div>
+    <div class="panel__body"><?= chart_hbars($topicRows, 'Module') ?></div>
+  </div>
+  <?php endif; ?>
+  <div class="panel <?= $w ?>">
     <div class="panel__head"><h2>Why deals were lost</h2></div>
     <div class="panel__body"><?= chart_hbars($lostRows, 'Reason', 'No deals lost in this period.') ?></div>
   </div>

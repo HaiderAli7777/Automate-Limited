@@ -10,15 +10,15 @@ function auth_login_page(): void
     $email = old('email');
     $next = input('next');
     ob_start(); ?>
-    <h1>Team sign-in</h1>
-    <p class="muted">Recruitment, CRM and the pipeline behind the website.</p>
+    <h1>Welcome back</h1>
+    <p class="muted">Sign in with your work email.</p>
     <form method="post" action="<?= e(admin_url('login')) ?>" class="stack">
       <?= csrf_field() ?>
       <input type="hidden" name="next" value="<?= e($next) ?>">
       <div class="field"><label for="email">Email</label><input class="input" id="email" name="email" type="email" autocomplete="username" required value="<?= e($email) ?>" autofocus></div>
-      <div class="field"><label for="password">Password</label><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
-      <button class="btn btn--primary btn--block" type="submit">Sign in</button>
-      <p class="small muted" style="text-align:center"><a class="link" href="<?= e(admin_url('forgot')) ?>">Forgot your password?</a></p>
+      <div class="field"><div class="row row--between"><label for="password">Password</label><a class="link small" href="<?= e(admin_url('forgot')) ?>">Forgot it?</a></div><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn--primary btn--block" type="submit" data-busy="Signing in...">Sign in</button>
+      <p class="small muted" style="text-align:center">No account? Ask an administrator to add you under Team and access.</p>
     </form>
     <?php
     render('admin/auth-layout', ['title' => 'Sign in', 'content' => ob_get_clean()]);

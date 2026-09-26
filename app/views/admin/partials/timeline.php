@@ -3,7 +3,7 @@
   <div class="empty empty--sm"><p>Nothing yet. Notes, emails and stage changes will appear here.</p></div>
 <?php else: ?>
 <div class="timeline">
-  <?php foreach ($items as $a): $meta = $a['meta'] ? (json_decode((string) $a['meta'], true) ?: []) : []; $deletable = isset(ACTIVITY_KINDS[$a['type']]) && ((int) $a['user_id'] === auth_id() || is_role('admin', 'manager')); ?>
+  <?php foreach ($items as $a): $meta = $a['meta'] ? (json_decode((string) $a['meta'], true) ?: []) : []; $deletable = isset(ACTIVITY_KINDS[$a['type']]) && ((int) $a['user_id'] === auth_id() || user_can('data.delete')); ?>
     <div class="tl tl--<?= e($a['type']) ?>">
       <span class="tl__ic"><?= icon(activity_icon((string) $a['type'])) ?></span>
       <div>

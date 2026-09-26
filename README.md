@@ -2,12 +2,19 @@
 
 The website for automateltd.com, plus a private team area with:
 
+- **Website pages**: home, `/services/` with a page per service, `/odoo-modules/`,
+  `/how-we-work/`, `/pricing/`, `/faq/` and `/contact/`. Every Odoo module tile opens the
+  enquiry page with that module filled in, so the lead arrives in the CRM tagged with it.
 - **Careers page** at `/careers/`, where people browse open roles and apply with their CV.
 - **ATS** (applicant tracking): jobs, candidates, a drag-and-drop hiring pipeline, interview
   scheduling with calendar invitations, scorecards, offers and email templates.
 - **CRM**: every message from the website contact form becomes a lead in a sales pipeline,
   with contacts, activity logging (calls, meetings, WhatsApp, email), follow-ups and deal values.
 - **Dashboards**: an overview for everyone, an ATS dashboard and a CRM dashboard.
+- **Team and access**: add people yourself, give them a ready-made access level or tick
+  exactly what they can see and do, and switch accounts off when someone leaves.
+- **Notifications and an activity log**: a bell for new applications, enquiries and anything
+  assigned to you, and a searchable record of who changed what.
 
 Plain PHP 8.1+ and MySQL, no build step and no Composer, so Hostinger runs it exactly as it
 sits in this repository.
@@ -62,13 +69,26 @@ Ctrl+Shift+R.
 
 Sign in at `/admin/` (the footer's **Team login** link goes there too).
 
-| Role | Can use |
+**Adding your team.** Go to **Admin, Team and access, Add a team member**. Enter their name
+and work email, pick an access level, and either tick *Email them an invitation* (they set their
+own password from the link, valid for 3 days) or set a password yourself. Use the menu on each
+row to resend the invitation or switch an account off; history stays either way.
+
+| Access level | Can use |
 |---|---|
-| Administrator | Everything, including Team and Settings |
-| Manager | Recruitment and CRM, without Team or Settings |
-| Recruiter | Jobs, candidates, pipeline and interviews |
-| Sales | Leads, contacts and the sales pipeline |
+| Administrator | Everything, including Team and access, Settings and the activity log |
+| Manager | Recruitment and CRM, exports, deletes and the activity log. No Team or Settings |
+| Recruiter | Jobs, candidates, pipeline and interviews, and exports |
+| Sales | Leads, contacts and the sales pipeline, and exports |
 | Interviewer | Only the interviews they're on, the candidate's CV, and their own scorecards |
+| Viewer | Can look at recruitment and sales, but can't change anything |
+| Custom access | Tick exactly what they need, for example sales staff who only see their own leads |
+
+The individual permissions are: see or manage recruitment, sit on interviews, see or manage
+sales, see every lead (or only leads assigned to them), export, delete, manage the team, change
+settings and see the activity log. The team page shows the full table. Someone who can manage
+the team but isn't an administrator can only give access they hold themselves, and can't change
+administrators or their own access. The site always keeps at least one active administrator.
 
 **Recruitment.** Create a job, add screening questions, and set it to *Open*: it appears on
 `/careers/` straight away, with structured data so Google for Jobs can pick it up. Each
@@ -83,6 +103,12 @@ from and any campaign tags (`utm_source`, `utm_medium`, `utm_campaign`) in the l
 meetings and WhatsApp messages, set the next follow-up, add a value, and drag the deal along the
 **Sales pipeline**. Moving a deal to *Lost* asks why, and the CRM dashboard shows the reasons.
 
+**Leads from module pages.** Tiles on the homepage, `/services/odoo-erp` and `/odoo-modules/`
+open `/contact/?service=Odoo%20ERP&module=Inventory` (for example). The lead title becomes
+"Odoo ERP (Inventory) for Company", the module is saved as its topic, and the CRM dashboard
+charts which modules people ask about. Tick several leads or candidates in a list to move,
+assign or delete them together.
+
 **Settings** holds the notification addresses, SMTP, the list of services on the enquiry form,
 the pipeline stages for both boards (rename, recolour, reorder, add) and every email template.
 
@@ -93,16 +119,18 @@ the pipeline stages for both boards (rename, recolour, reorder, add) and every e
 | Path | Purpose |
 |---|---|
 | `index.php` | Homepage |
-| `careers/`, `contact/`, `privacy/` | Careers pages, the enquiry form handler, the privacy notice |
+| `services/`, `odoo-modules/`, `how-we-work/`, `pricing/`, `faq/` | Website pages |
+| `careers/`, `contact/`, `privacy/` | Careers pages, the enquiry page and its handler, the privacy notice |
+| `app/content/` | Text for the services, Odoo modules and FAQs, edited in one place |
 | `admin/` | Front controller for the team area |
 | `install/` | One-time installer (locks itself after use) |
 | `app/` | All PHP code, views and the schema. Never served (`app/.htaccess`) |
-| `app/admin/controllers/` | ATS, CRM, dashboards, settings |
+| `app/admin/controllers/` | ATS, CRM, dashboards, team and access, notifications, settings |
 | `app/views/site/`, `app/views/admin/` | Templates for the website and the team area |
 | `app/schema.php` | Database tables as numbered migrations |
 | `assets/` | Stylesheets, scripts and the icon sprite |
 | `fonts/` | Outfit and IBM Plex Sans, self-hosted, with their OFL licences |
-| `sitemap.php` | Served as `/sitemap.xml`, including live job postings |
+| `sitemap.php` | Served as `/sitemap.xml`, including every service page and live job postings |
 | `.htaccess` | HTTPS, www to bare domain, pretty URLs, private folders, caching, security headers |
 | `og-automate.png`, `favicon.ico`, `apple-touch-icon.png`, `logo-automate*.svg` | Share card, icons, logos |
 

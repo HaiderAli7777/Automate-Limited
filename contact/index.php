@@ -1,19 +1,42 @@
 <?php
 /*
- * Website enquiry handler. Every valid submission lands in the CRM as a lead
+ * The enquiry page (GET) and its handler (POST). Every valid submission lands in the CRM as a lead
  * (or as a new message on the sender's open lead from the last week), the
  * sales inbox is notified, and the sender gets an acknowledgement.
  */
 declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
 
+/** The enquiry page, with the form pre-filled from ?service= and ?module=. */
+function contact_page(array $errors = [], array $values = [], bool $sent = false): never
+{
+    $services = app_installed() ? lead_services() : array_column(site_services(), 'name');
+    $pre = $values ?: [
+        'service' => in_array(input('service'), $services, true) ? input('service') : '',
+        'module' => contact_module(input('module')) ?? '',
+    ];
+    render('site/contact-page', ['errors' => $errors, 'values' => $pre, 'sent' => $sent]);
+    exit;
+}
+
+/** A module name from the modules list, or null. */
+function contact_module(string $name): ?string
+{
+    foreach (site_modules() as $m) {
+        if (strcasecmp($m['name'], trim($name)) === 0) {
+            return $m['name'];
+        }
+    }
+    return null;
+}
+
 if (!is_post()) {
-    redirect(url('') . '#contact');
+    contact_page([], [], input('sent') === '1');
 }
 
 $ajax = is_ajax();
 $values = [];
-foreach (['name', 'email', 'company', 'phone', 'service', 'message'] as $k) {
+foreach (['name', 'email', 'company', 'phone', 'service', 'module', 'message'] as $k) {
     $values[$k] = input($k);
 }
 $values['email'] = strtolower($values['email']);
@@ -25,17 +48,9 @@ $respond = static function (bool $ok, array $errors = []) use ($ajax, $values): 
             : ['ok' => false, 'errors' => $errors, 'error' => $errors['form'] ?? 'Please check the highlighted fields.'], $ok ? 200 : 422);
     }
     if ($ok) {
-        redirect(url('') . '?sent=1#contact', 303);
+        redirect(url('contact/') . '?sent=1#enquiry', 303);
     }
-    partial('site/head', ['title' => 'Contact | Automate Limited', 'description' => 'Send Automate Limited a message.', 'path' => 'contact/', 'noindex' => true]);
-    echo '<body>';
-    partial('site/header');
-    echo '<main id="main" class="doc"><div class="wrap"><div class="cta"><div class="cta__grid"><div><h2>Almost there.</h2><p>Please check the highlighted fields and send it again.</p></div><div class="cform">';
-    partial('site/contact-form', ['errors' => $errors, 'values' => $values]);
-    echo '</div></div></div></div></main>';
-    partial('site/footer');
-    echo '</body></html>';
-    exit;
+    contact_page($errors, $values);
 };
 
 // Bots fill the hidden field or submit instantly: act as if it worked, store nothing.
@@ -74,10 +89,12 @@ if (!throttle('contact|' . client_ip(), 6, 600)) {
 }
 
 $service = in_array($values['service'], array_merge(lead_services(), ['Not sure yet']), true) ? $values['service'] : 'Not sure yet';
+// the Odoo module they picked, kept as the lead's topic
+$topic = $service === 'Odoo ERP' ? contact_module($values['module']) : null;
 $now = now();
 $clip = static fn (string $v, int $n): ?string => $v === '' ? null : mb_substr($v, 0, $n);
 
-$leadId = db()->tx(static function (Db $db) use ($values, $service, $now, $clip): int {
+$leadId = db()->tx(static function (Db $db) use ($values, $service, $topic, $now, $clip): int {
     $contact = $db->one('SELECT * FROM contacts WHERE email = ? ORDER BY id LIMIT 1', [$values['email']]);
     if ($contact) {
         $contactId = (int) $contact['id'];
@@ -107,17 +124,18 @@ $leadId = db()->tx(static function (Db $db) use ($values, $service, $now, $clip)
     );
     if ($recent) {
         $db->update('leads', ['updated_at' => $now], 'id = ?', [(int) $recent['id']]);
-        log_activity('lead', (int) $recent['id'], 'email', 'New message from the website form', $values['message'], ['service' => $service], null);
+        log_activity('lead', (int) $recent['id'], 'email', 'New message from the website form' . ($topic ? ' about ' . $topic : ''), $values['message'], ['service' => $service], null);
         return (int) $recent['id'];
     }
 
     $who = $values['company'] !== '' ? $values['company'] : $values['name'];
-    $title = $service === 'Not sure yet' ? 'Enquiry from ' . $who : $service . ' for ' . $who;
+    $title = $service === 'Not sure yet' ? 'Enquiry from ' . $who : $service . ($topic ? ' (' . $topic . ')' : '') . ' for ' . $who;
     $owner = (int) setting('lead_default_owner', '0');
     $leadId = $db->insert('leads', [
         'contact_id' => $contactId,
         'title' => mb_substr($title, 0, 190),
         'service' => $service,
+        'topic' => $topic,
         'source' => 'website',
         'stage_id' => first_stage_id(lead_stages(), 'open'),
         'status' => 'open',
@@ -140,13 +158,16 @@ $leadId = db()->tx(static function (Db $db) use ($values, $service, $now, $clip)
 });
 
 $lead = lead_full($leadId);
+if ($lead) {
+    notify(lead_audience($lead['owner_id'] ? (int) $lead['owner_id'] : null), 'New enquiry: ' . $lead['title'], admin_url('leads/' . $leadId), $values['name'] . ($values['company'] !== '' ? ', ' . $values['company'] : ''), 'funnel');
+}
 if ($lead && setting('notify_new_inquiry', '1') === '1') {
     $body = "A new enquiry came in through the website.\n\n"
         . 'Name: ' . $values['name'] . "\n"
         . 'Email: ' . $values['email'] . "\n"
         . ($values['company'] !== '' ? 'Company: ' . $values['company'] . "\n" : '')
         . ($values['phone'] !== '' ? 'Phone: ' . $values['phone'] . "\n" : '')
-        . 'Interested in: ' . $service . "\n\n"
+        . 'Interested in: ' . $service . ($topic ? ', ' . $topic . ' module' : '') . "\n\n"
         . $values['message'] . "\n\n"
         . 'Open it in the CRM: ' . site_origin() . admin_url('leads/' . $leadId);
     notify_team((string) setting('sales_email', ''), 'New enquiry: ' . $lead['title'], $body, ['reply_to' => $values['email']]);

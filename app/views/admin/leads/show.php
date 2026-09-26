@@ -7,6 +7,7 @@ $services = array_merge(lead_services(), ['Not sure yet']);
 if ($lead['service'] && !in_array($lead['service'], $services, true)) { $services[] = $lead['service']; }
 $hasUtm = $lead['utm_source'] || $lead['utm_medium'] || $lead['utm_campaign'] || $lead['referrer'] || $lead['landing_page'];
 $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' ? 'x' : null);
+$edit = user_can('crm.manage');
 ?>
 <a class="crumb" href="<?= e(admin_url('leads')) ?>"><?= icon('arrow-left') ?>Leads</a>
 <div class="profile">
@@ -20,6 +21,7 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
         <span><?= icon('chat-circle-text') ?><a class="link" href="https://wa.me/<?= e(preg_replace('/[^0-9]/', '', (string) $lead['contact_phone'])) ?>" target="_blank" rel="noopener noreferrer">WhatsApp</a></span><?php endif; ?>
     </div>
   </div>
+  <?php if (!$edit): ?><div class="profile__actions"><span class="chip"><?= icon('eye') ?>View only</span></div><?php else: ?>
   <div class="profile__actions">
     <?php if ($lead['contact_email']): ?><button class="btn btn--quiet" type="button" data-open-dialog="leadEmailDialog"><?= icon('envelope-simple') ?>Email</button><?php endif; ?>
     <a class="btn btn--primary" href="#log"><?= icon('phone-call') ?>Log activity</a>
@@ -27,11 +29,14 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
       <summary class="btn btn--quiet btn--icon" aria-label="More actions"><?= icon('dots-three') ?></summary>
       <div class="dropdown__menu">
         <?php if ($lead['contact_id']): ?><a href="<?= e(admin_url('leads/new') . '?contact=' . $lead['contact_id']) ?>"><?= icon('plus') ?>New lead for this contact</a><?php endif; ?>
+        <?php if (user_can('data.delete')): ?>
         <div class="dropdown__sep"></div>
         <form method="post" action="<?= e(admin_url('leads/' . $lead['id'] . '/delete')) ?>" data-confirm="Delete this lead and its history?"><?= csrf_field() ?><button type="submit" class="is-danger"><?= icon('trash') ?>Delete lead</button></form>
+        <?php endif; ?>
       </div>
     </details>
   </div>
+  <?php endif; ?>
 </div>
 
 <div class="panel" style="margin-bottom:18px"><div class="panel__body">
@@ -41,7 +46,9 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
         $cls = ($isCurrent ? 'is-current' : ($reached && $s['kind'] === 'open' ? 'is-done' : '')) . ($s['kind'] === 'lost' ? ' is-negative' : ($s['kind'] === 'won' ? ' is-positive' : ''));
         if ($isCurrent) { $reached = false; }
     ?>
-      <?php if ($s['kind'] === 'lost' && !$isCurrent): ?>
+      <?php if (!$edit): ?>
+        <button type="button" class="<?= e($cls) ?>" disabled<?= $isCurrent ? ' aria-current="step"' : '' ?>><?= e($s['name']) ?></button>
+      <?php elseif ($s['kind'] === 'lost' && !$isCurrent): ?>
         <button type="button" class="<?= e($cls) ?>" data-open-dialog="lostOneDialog"><?= e($s['name']) ?></button>
       <?php else: ?>
         <form method="post" action="<?= e(admin_url('leads/' . $lead['id'] . '/stage')) ?>"><?= csrf_field() ?><input type="hidden" name="stage_id" value="<?= (int) $sid ?>">
@@ -57,7 +64,7 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
   <div class="stack">
     <?php if ($lead['message']): ?>
     <div class="panel">
-      <div class="panel__head"><h2>The enquiry</h2><span class="muted"><?= e(LEAD_SOURCES[$lead['source']] ?? $lead['source']) ?>, <?= e(fmt_datetime($lead['created_at'])) ?></span></div>
+      <div class="panel__head"><h2>The enquiry<?= $lead['topic'] ? ' <span class="chip chip--xs">' . e($lead['topic']) . '</span>' : '' ?></h2><span class="muted"><?= e(LEAD_SOURCES[$lead['source']] ?? $lead['source']) ?>, <?= e(fmt_datetime($lead['created_at'])) ?></span></div>
       <div class="panel__body"><p class="pre"><?= e($lead['message']) ?></p></div>
     </div>
     <?php endif; ?>
@@ -65,6 +72,7 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
     <div class="panel" id="timeline">
       <div class="panel__head"><h2>Activity</h2><span class="muted">Calls, meetings, emails and notes</span></div>
       <div class="panel__body">
+        <?php if ($edit): ?>
         <form method="post" action="<?= e(admin_url('leads/' . $lead['id'] . '/activity')) ?>" class="composer" id="log" style="margin-bottom:22px">
           <?= csrf_field() ?>
           <div class="composer__kinds" role="radiogroup" aria-label="What are you logging?">
@@ -78,12 +86,27 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
             <button class="btn btn--primary btn--sm" type="submit">Save</button>
           </div>
         </form>
+        <?php endif; ?>
         <?php partial('admin/partials/timeline', ['items' => $timeline]); ?>
       </div>
     </div>
   </div>
 
   <div class="stack">
+    <?php if (!$edit): ?>
+    <div class="panel">
+      <div class="panel__head"><h2>Deal</h2></div>
+      <div class="panel__body"><dl class="dl">
+        <dt>Value</dt><dd><?= $lead['value'] !== null ? e(fmt_money($lead['value'], $lead['currency'])) : '-' ?></dd>
+        <dt>Service</dt><dd><?= e($lead['service'] ?: '-') ?><?= $lead['topic'] ? ', ' . e($lead['topic']) : '' ?></dd>
+        <dt>Source</dt><dd><?= e(LEAD_SOURCES[$lead['source']] ?? $lead['source']) ?></dd>
+        <dt>Priority</dt><dd><?= e(LEAD_PRIORITIES[$lead['priority']] ?? $lead['priority']) ?></dd>
+        <dt>Owner</dt><dd><?= $lead['owner_id'] ? e(user_name((int) $lead['owner_id'])) : 'Unassigned' ?></dd>
+        <dt>Next follow-up</dt><dd><?= $lead['next_follow_up'] ? e(fmt_datetime($lead['next_follow_up'])) : '-' ?></dd>
+        <dt>Expected close</dt><dd><?= $lead['expected_close'] ? e(fmt_date($lead['expected_close'])) : '-' ?></dd>
+      </dl></div>
+    </div>
+    <?php else: ?>
     <form method="post" action="<?= e(admin_url('leads/' . $lead['id'] . '/update')) ?>" class="panel">
       <?= csrf_field() ?>
       <div class="panel__head"><h2>Deal</h2><?php if ($lead['value'] !== null && $current && $current['kind'] === 'open'): ?><span class="muted">Weighted <?= e(fmt_money(weighted_value($lead), $lead['currency'])) ?></span><?php endif; ?></div>
@@ -95,15 +118,17 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
         </div>
         <div class="grid-2 grid-tight">
           <?= fs('service', 'Service', array_combine($services, $services), (string) $lead['service']) ?>
+          <?= fi('topic', 'Module or topic', (string) $lead['topic'], ['optional' => true, 'placeholder' => 'For example Inventory']) ?>
           <?= fs('source', 'Source', LEAD_SOURCES, $lead['source']) ?>
           <?= fs('priority', 'Priority', LEAD_PRIORITIES, $lead['priority']) ?>
-          <?= fs('owner_id', 'Owner', user_options($lead['owner_id'] ? (int) $lead['owner_id'] : null, 'Unassigned', ['admin', 'manager', 'sales'])) ?>
+          <?= fs('owner_id', 'Owner', user_options($lead['owner_id'] ? (int) $lead['owner_id'] : null, 'Unassigned', 'crm.manage')) ?>
         </div>
         <?= fi('next_follow_up', 'Next follow-up', dt_input($lead['next_follow_up']), ['type' => 'datetime-local', 'class' => $followCls === 'is-overdue' ? 'has-error' : '', 'help' => $followCls === 'is-overdue' ? 'Overdue.' : '']) ?>
         <?= fi('expected_close', 'Expected close', (string) $lead['expected_close'], ['type' => 'date']) ?>
         <div><button class="btn btn--quiet btn--sm" type="submit">Save deal</button></div>
       </div>
     </form>
+    <?php endif; ?>
 
     <?php partial('admin/partials/tasks-panel', ['entityType' => 'lead', 'entityId' => (int) $lead['id'], 'tasks' => $tasks]); ?>
 
@@ -129,7 +154,7 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
   </div>
 </div>
 
-<?php if ($lead['contact_email']): ?>
+<?php if ($edit && $lead['contact_email']): ?>
 <dialog class="modal modal--wide" id="leadEmailDialog" aria-labelledby="leadEmailTitle">
   <form method="post" action="<?= e(admin_url('leads/' . $lead['id'] . '/email')) ?>">
     <?= csrf_field() ?>
@@ -143,4 +168,4 @@ $followCls = task_due_class($lead['next_follow_up'], $lead['status'] !== 'open' 
   </form>
 </dialog>
 <?php endif; ?>
-<?php partial('admin/partials/lost-dialog', ['id' => 'lostOneDialog', 'method' => 'post', 'action' => admin_url('leads/' . $lead['id'] . '/stage'), 'stageId' => first_stage_id($stages, 'lost')]); ?>
+<?php if ($edit) partial('admin/partials/lost-dialog', ['id' => 'lostOneDialog', 'method' => 'post', 'action' => admin_url('leads/' . $lead['id'] . '/stage'), 'stageId' => first_stage_id($stages, 'lost')]); ?>

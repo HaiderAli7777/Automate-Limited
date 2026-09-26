@@ -153,6 +153,7 @@ function interviews_save(int $id = 0): void
     $when12 = fmt_day($iv['scheduled_at']) . ' at ' . fmt_time($iv['scheduled_at']);
     log_activity('application', $appId, 'interview', ($existing ? ($changedTime ? 'Interview rescheduled: ' : 'Interview updated: ') : 'Interview scheduled: ') . $iv['title'], $when12 . ' with ' . implode(', ', array_column($iv['panel'], 'name')));
 
+    notify(array_column($iv['panel'], 'id'), ($existing ? 'Interview changed: ' : 'You\'re on an interview panel: ') . candidate_name($app), admin_url('interviews/' . $id), $when12 . ', ' . $app['job_title'], 'calendar-dots');
     $notes = [];
     $ics = [['name' => 'interview.ics', 'content' => interview_ics($iv), 'mime' => 'text/calendar; charset=utf-8; method=PUBLISH']];
     if (input('notify_candidate') === '1' && (!$existing || $changedTime)) {
@@ -214,7 +215,7 @@ function interviews_show(int $id): void
         }
     }
     // panel members see the others' scorecards only after writing their own, to keep scores independent
-    $canSeeAll = user_can('ats') && !on_panel($iv) || $mine !== null || is_role('admin', 'manager');
+    $canSeeAll = user_can('ats') && !on_panel($iv) || $mine !== null || user_can('audit.view');
     $resume = db()->one('SELECT f.* FROM applications a JOIN files f ON f.id = a.resume_file_id WHERE a.id = ?', [(int) $iv['application_id']]);
     admin_view('interviews/show', ['title' => $iv['title'], 'nav' => 'interviews', 'iv' => $iv, 'feedback' => $feedback, 'mine' => $mine, 'canSeeAll' => $canSeeAll, 'onPanel' => on_panel($iv), 'resume' => $resume]);
 }
@@ -272,6 +273,8 @@ function interviews_feedback(int $id): void
     } else {
         db()->insert('interview_feedback', $data + ['interview_id' => $id, 'user_id' => auth_id(), 'created_at' => now()]);
         log_activity('application', (int) $iv['application_id'], 'feedback', 'Scorecard: ' . RECOMMENDATIONS[$rec] . ', ' . $rating . '/5', '', ['interview' => $iv['title']]);
+        $owner = (int) db()->value('SELECT owner_id FROM applications WHERE id = ?', [(int) $iv['application_id']]);
+        notify([$owner, (int) $iv['created_by']], auth_user()['name'] . ' scored ' . candidate_name($iv) . ': ' . RECOMMENDATIONS[$rec], admin_url('interviews/' . $id), $rating . '/5 for ' . $iv['job_title'], 'star');
     }
     if ($iv['status'] === 'scheduled' && ts($iv['scheduled_at']) < time()) {
         db()->update('interviews', ['status' => 'completed', 'updated_at' => now()], 'id = ?', [$id]);

@@ -83,6 +83,7 @@ function tasks_create(): void
         log_activity($type, (int) $eid, 'task', 'Task added: ' . $title, '', ['task_id' => $id, 'due' => $due, 'assignee' => user_name($assignee)]);
     }
     if ($assignee !== auth_id()) {
+        notify([$assignee], 'New task from ' . auth_user()['name'] . ': ' . $title, admin_url('tasks'), $due ? 'Due ' . fmt_datetime($due) : '', 'check-square');
         $email = db()->value('SELECT email FROM users WHERE id = ? AND is_active = 1', [$assignee]);
         if ($email) {
             Mailer::send((string) $email, 'New task: ' . $title, auth_user()['name'] . " assigned you a task.\n\n" . $title . ($due ? "\nDue: " . fmt_datetime($due) : '') . "\n\n" . site_origin() . admin_url('tasks'));
@@ -109,7 +110,7 @@ function tasks_toggle(int $id): void
 function tasks_delete(int $id): void
 {
     $t = db()->one('SELECT * FROM tasks WHERE id = ?', [$id]) ?? abort(404);
-    if ((int) $t['created_by'] !== auth_id() && (int) $t['assigned_to'] !== auth_id() && !is_role('admin', 'manager')) {
+    if ((int) $t['created_by'] !== auth_id() && (int) $t['assigned_to'] !== auth_id() && !user_can('data.delete')) {
         abort(403);
     }
     db()->delete('tasks', 'id = ?', [$id]);
@@ -122,7 +123,7 @@ function activities_delete(int $id): void
 {
     $a = db()->one('SELECT * FROM activities WHERE id = ?', [$id]) ?? abort(404);
     $editable = in_array($a['type'], array_keys(ACTIVITY_KINDS), true);
-    if (!$editable || ((int) $a['user_id'] !== auth_id() && !is_role('admin', 'manager'))) {
+    if (!$editable || ((int) $a['user_id'] !== auth_id() && !user_can('data.delete'))) {
         abort(403, 'Only the person who wrote a note can delete it.');
     }
     db()->delete('activities', 'id = ?', [$id]);
@@ -192,10 +193,10 @@ function search_page(): void
         if (user_can('crm')) {
             $results['leads'] = db()->all(
                 'SELECT l.*, c.name AS contact_name, c.company AS contact_company FROM leads l LEFT JOIN contacts c ON c.id = l.contact_id
-                 WHERE l.title LIKE ? OR c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ? OR c.phone LIKE ? ORDER BY l.updated_at DESC LIMIT 25',
+                 WHERE (l.title LIKE ? OR c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ? OR c.phone LIKE ?)' . crm_scope('l') . ' ORDER BY l.updated_at DESC LIMIT 25',
                 [$like, $like, $like, $like, $like]
             );
-            $results['contacts'] = db()->all('SELECT * FROM contacts WHERE name LIKE ? OR email LIKE ? OR company LIKE ? OR phone LIKE ? ORDER BY updated_at DESC LIMIT 25', [$like, $like, $like, $like]);
+            $results['contacts'] = db()->all('SELECT * FROM contacts c WHERE (c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ? OR c.phone LIKE ?)' . contact_scope('c') . ' ORDER BY c.updated_at DESC LIMIT 25', [$like, $like, $like, $like]);
         }
     }
     admin_view('search', ['title' => 'Search', 'nav' => 'search', 'q' => $q, 'results' => $results]);

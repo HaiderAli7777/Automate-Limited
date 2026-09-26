@@ -22,6 +22,7 @@ require APP_DIR . '/lib/Mailer.php';
 require APP_DIR . '/lib/uploads.php';
 require APP_DIR . '/lib/markdown.php';
 require APP_DIR . '/lib/domain.php';
+require APP_DIR . '/lib/content.php';
 
 final class App
 {

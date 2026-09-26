@@ -347,6 +347,129 @@
     window.addEventListener("scroll", hide, { passive: true });
   }
 
+  /* ------------------------------------------------------------ access rights form
+     Picking a level ticks its permissions. Changing any tick switches to
+     Custom access. The summary on the side follows along. */
+  all("[data-access-form]").forEach(function (form) {
+    var radios = all('input[name="role"]', form);
+    var boxes = all('input[name="perms[]"]', form);
+    var custom = form.querySelector('input[name="role"][value="custom"]');
+    var adminNote = form.querySelector("[data-admin-note]");
+    var summary = document.querySelector("[data-access-summary]");
+    function has(p) { return boxes.some(function (b) { return b.value === p && b.checked; }); }
+    function level(view, manage) { return manage ? "Full" : (view ? "View only" : "None"); }
+    function render() {
+      var chosen = radios.filter(function (r) { return r.checked; })[0];
+      if (adminNote) adminNote.hidden = !chosen || chosen.value !== "admin";
+      if (!summary) return;
+      var sales = level(has("crm.view"), has("crm.manage"));
+      if (sales !== "None") sales += has("crm.all") ? ", all leads" : ", own leads";
+      var also = [];
+      if (has("team.manage")) also.push("Team");
+      if (has("settings.manage")) also.push("Settings");
+      if (has("data.export")) also.push("Export");
+      if (has("data.delete")) also.push("Delete");
+      if (has("audit.view")) also.push("Activity log");
+      var rows = [["Recruitment", level(has("ats.view"), has("ats.manage"))], ["Interviews", has("interviews.own") || has("ats.view") ? "Yes" : "No"], ["Sales", sales]];
+      if (also.length) rows.push(["Also", also.join(", ")]);
+      summary.innerHTML = "";
+      rows.forEach(function (r) {
+        var dt = document.createElement("dt"); dt.textContent = r[0];
+        var dd = document.createElement("dd"); dd.textContent = r[1];
+        summary.appendChild(dt); summary.appendChild(dd);
+      });
+    }
+    radios.forEach(function (r) {
+      r.addEventListener("change", function () {
+        var preset = null;
+        try { preset = JSON.parse(r.getAttribute("data-preset") || "null"); } catch (e) {}
+        if (preset) boxes.forEach(function (b) { if (!b.disabled) b.checked = preset.indexOf(b.value) > -1; });
+        render();
+      });
+    });
+    boxes.forEach(function (b) {
+      b.addEventListener("change", function () {
+        var needs = b.getAttribute("data-needs");
+        if (b.checked && needs) boxes.forEach(function (o) { if (o.value === needs) o.checked = true; });
+        if (!b.checked) boxes.forEach(function (o) { if (o.getAttribute("data-needs") === b.value) o.checked = false; });
+        if (custom && !custom.disabled) custom.checked = true;
+        render();
+      });
+    });
+    render();
+  });
+
+  /* ------------------------------------------------------------ bulk selection on list tables */
+  all("[data-bulk]").forEach(function (wrap) {
+    var bar = wrap.querySelector("[data-bulk-bar]");
+    var master = wrap.querySelector("[data-bulk-all]");
+    var count = wrap.querySelector("[data-bulk-count]");
+    function boxes() { return all("[data-bulk-item]", wrap); }
+    function sync() {
+      var n = boxes().filter(function (b) { return b.checked; }).length;
+      if (bar) bar.hidden = n === 0;
+      if (count) count.textContent = n + " selected";
+      if (master) {
+        master.checked = n > 0 && n === boxes().length;
+        master.indeterminate = n > 0 && n < boxes().length;
+      }
+      boxes().forEach(function (b) { var tr = b.closest("tr"); if (tr) tr.classList.toggle("is-selected", b.checked); });
+    }
+    if (master) master.addEventListener("change", function () { boxes().forEach(function (b) { b.checked = master.checked; }); sync(); });
+    wrap.addEventListener("change", function (e) { if (e.target.hasAttribute && e.target.hasAttribute("data-bulk-item")) sync(); });
+    all("[data-bulk-clear]", wrap).forEach(function (btn) {
+      btn.addEventListener("click", function () { boxes().forEach(function (b) { b.checked = false; }); sync(); });
+    });
+    // show only the inputs the chosen action needs
+    var action = wrap.querySelector("[data-bulk-action]");
+    function syncAction() {
+      if (!action) return;
+      all("[data-bulk-for]", wrap).forEach(function (el) {
+        var on = el.getAttribute("data-bulk-for").split(" ").indexOf(action.value) > -1;
+        el.hidden = !on;
+        all("select, input", el).forEach(function (i) { i.disabled = !on; });
+      });
+      var go = wrap.querySelector("[data-bulk-go]");
+      if (go) go.classList.toggle("btn--danger", action.value === "delete");
+    }
+    if (action) { action.addEventListener("change", syncAction); syncAction(); }
+    wrap.addEventListener("submit", function (e) {
+      var n = boxes().filter(function (b) { return b.checked; }).length;
+      if (action && action.value === "delete" && !window.confirm("Delete " + n + (n === 1 ? " item" : " items") + " and their history? This can't be undone.")) e.preventDefault();
+    });
+    var stage = wrap.querySelector("[data-bulk-stage]");
+    function syncStage() {
+      if (!stage) return;
+      var opt = stage.options[stage.selectedIndex];
+      var kind = opt ? opt.getAttribute("data-kind") : "";
+      all("[data-bulk-rejected]", wrap).forEach(function (el) { el.hidden = kind !== "rejected" && kind !== "lost"; });
+    }
+    if (stage) { stage.addEventListener("change", syncStage); syncStage(); }
+    sync();
+  });
+
+  /* ------------------------------------------------------------ notifications: mark all read from the bell */
+  all("[data-read-all]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      post(form.getAttribute("action"), {}).then(function (res) {
+        if (!res.ok) return;
+        all(".notif.is-unread").forEach(function (n) { n.classList.remove("is-unread"); });
+        all("[data-notif-count]").forEach(function (c) { c.remove(); });
+        form.remove();
+      });
+    });
+  });
+
+  /* ------------------------------------------------------------ "/" focuses search */
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    var box = document.querySelector('.search-box input');
+    if (box && box.offsetParent !== null) { e.preventDefault(); box.focus(); box.select(); }
+  });
+
   /* ------------------------------------------------------------ copy buttons */
   all("[data-copy]").forEach(function (btn) {
     btn.addEventListener("click", function () {

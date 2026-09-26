@@ -1,7 +1,7 @@
 <?php /** @var array $jobs @var string $status @var string $q @var array $counts */ ?>
 <div class="phead">
   <div><h1>Jobs</h1><p class="phead__sub">Open roles appear on the careers page automatically.</p></div>
-  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(url('careers/')) ?>" target="_blank" rel="noopener"><?= icon('arrow-square-out') ?>Careers page</a><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>"><?= icon('plus') ?>New job</a></div>
+  <div class="phead__actions"><a class="btn btn--quiet" href="<?= e(url('careers/')) ?>" target="_blank" rel="noopener"><?= icon('arrow-square-out') ?>Careers page</a><?php if (user_can('ats.manage')): ?><a class="btn btn--primary" href="<?= e(admin_url('jobs/new')) ?>"><?= icon('plus') ?>New job</a><?php endif; ?></div>
 </div>
 <nav class="tabs" aria-label="Job status">
   <?php foreach (['open' => 'Open', 'draft' => 'Drafts', 'paused' => 'Paused', 'closed' => 'Closed', 'all' => 'All'] as $k => $label): $n = $k === 'all' ? array_sum($counts) : (int) ($counts[$k] ?? 0); ?>

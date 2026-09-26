@@ -166,6 +166,12 @@ function period_filter(array $period, string $path): string
     return $html . '</select><span class="muted">Changes compare with the ' . e(strtolower(str_replace('Last ', 'previous ', $period['label']))) . '. Pipeline figures are as of now.</span><noscript><button class="btn btn--quiet btn--sm" type="submit">Apply</button></noscript></form>';
 }
 
+/** Lets dashboard SQL limit leads to the viewer's own when they can't see every lead. */
+function set_crm_scope_var(): void
+{
+    db()->run('SET @crm_owner = ?', [user_can('crm.all') ? null : auth_id()]);
+}
+
 /* ------------------------------------------------------------------ overview */
 function dashboard_overview(): void
 {
@@ -194,13 +200,14 @@ function dashboard_overview(): void
         $stats['open_jobs'] = (int) db()->value("SELECT COUNT(*) FROM jobs WHERE status = 'open'");
     }
     if (user_can('crm')) {
-        $stats['leads'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE created_at >= ?', [$weekAgo]);
-        $stats['leads_prev'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE created_at >= ? AND created_at < ?', [$twoWeeksAgo, $weekAgo]);
-        $stats['pipeline'] = (float) db()->value("SELECT COALESCE(SUM(value), 0) FROM leads WHERE status = 'open'");
-        $stats['follow_overdue'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE status = 'open' AND next_follow_up < ?", [now()]);
+        set_crm_scope_var();
+        $stats['leads'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ?', [$weekAgo]);
+        $stats['leads_prev'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ? AND created_at < ?', [$twoWeeksAgo, $weekAgo]);
+        $stats['pipeline'] = (float) db()->value("SELECT COALESCE(SUM(value), 0) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'open'");
+        $stats['follow_overdue'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'open' AND next_follow_up < ?", [now()]);
         $stats['uncontacted'] = nav_counts()['new_leads'];
     }
-    $recentLeads = user_can('crm') ? db()->all('SELECT l.*, c.name AS contact_name, c.company AS contact_company FROM leads l LEFT JOIN contacts c ON c.id = l.contact_id ORDER BY l.created_at DESC LIMIT 5') : [];
+    $recentLeads = user_can('crm') ? db()->all('SELECT l.*, c.name AS contact_name, c.company AS contact_company FROM leads l LEFT JOIN contacts c ON c.id = l.contact_id WHERE (@crm_owner IS NULL OR l.owner_id = @crm_owner) ORDER BY l.created_at DESC LIMIT 5') : [];
     $recentApps = user_can('ats') ? db()->all('SELECT a.id, a.stage_id, a.applied_at, c.first_name, c.last_name, j.title AS job_title FROM applications a JOIN candidates c ON c.id = a.candidate_id JOIN jobs j ON j.id = a.job_id ORDER BY a.applied_at DESC LIMIT 5') : [];
     admin_view('dashboard/overview', [
         'title' => 'Dashboard', 'nav' => 'home', 'tasks' => $tasks, 'interviews' => $interviews, 'stats' => $stats,
@@ -283,15 +290,16 @@ function dashboard_ats(): void
 function dashboard_crm(): void
 {
     $p = dash_period();
+    set_crm_scope_var();
     $stages = lead_stages();
     $cur = (string) setting('default_currency', 'PKR');
     $m = [];
-    $m['leads'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE created_at >= ?', [$p['from']]);
-    $m['leads_prev'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE created_at >= ? AND created_at < ?', [$p['prev_from'], $p['from']]);
-    $won = db()->one("SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS v FROM leads WHERE status = 'won' AND won_at >= ?", [$p['from']]);
-    $wonPrev = db()->one("SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS v FROM leads WHERE status = 'won' AND won_at >= ? AND won_at < ?", [$p['prev_from'], $p['from']]);
-    $lost = (int) db()->value("SELECT COUNT(*) FROM leads WHERE status = 'lost' AND lost_at >= ?", [$p['from']]);
-    $lostPrev = (int) db()->value("SELECT COUNT(*) FROM leads WHERE status = 'lost' AND lost_at >= ? AND lost_at < ?", [$p['prev_from'], $p['from']]);
+    $m['leads'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ?', [$p['from']]);
+    $m['leads_prev'] = (int) db()->value('SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ? AND created_at < ?', [$p['prev_from'], $p['from']]);
+    $won = db()->one("SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS v FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'won' AND won_at >= ?", [$p['from']]);
+    $wonPrev = db()->one("SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS v FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'won' AND won_at >= ? AND won_at < ?", [$p['prev_from'], $p['from']]);
+    $lost = (int) db()->value("SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'lost' AND lost_at >= ?", [$p['from']]);
+    $lostPrev = (int) db()->value("SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'lost' AND lost_at >= ? AND lost_at < ?", [$p['prev_from'], $p['from']]);
     $m['won_n'] = (int) $won['n'];
     $m['won_v'] = (float) $won['v'];
     $m['won_v_prev'] = (float) $wonPrev['v'];
@@ -299,13 +307,13 @@ function dashboard_crm(): void
     $prevClosed = (int) $wonPrev['n'] + $lostPrev;
     $m['win_rate_prev'] = $prevClosed > 0 ? (int) $wonPrev['n'] / $prevClosed * 100 : null;
     $m['avg_deal'] = $m['won_n'] ? $m['won_v'] / $m['won_n'] : null;
-    $open = db()->all("SELECT id, stage_id, value FROM leads WHERE status = 'open'");
+    $open = db()->all("SELECT id, stage_id, value FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'open'");
     $m['open_n'] = count($open);
     $m['open_v'] = array_sum(array_map(static fn ($l) => (float) $l['value'], $open));
     $m['weighted'] = array_sum(array_map('weighted_value', $open));
-    $m['overdue'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE status = 'open' AND next_follow_up < ?", [now()]);
-    $m['no_follow'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE status = 'open' AND next_follow_up IS NULL");
-    $m['cycle'] = db()->value("SELECT AVG(TIMESTAMPDIFF(HOUR, created_at, won_at)) / 24 FROM leads WHERE status = 'won' AND won_at >= ?", [$p['from']]);
+    $m['overdue'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'open' AND next_follow_up < ?", [now()]);
+    $m['no_follow'] = (int) db()->value("SELECT COUNT(*) FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'open' AND next_follow_up IS NULL");
+    $m['cycle'] = db()->value("SELECT AVG(TIMESTAMPDIFF(HOUR, created_at, won_at)) / 24 FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'won' AND won_at >= ?", [$p['from']]);
 
     $byStage = [];
     foreach ($open as $l) {
@@ -328,33 +336,35 @@ function dashboard_crm(): void
         }
     }
     $sourceRows = array_map(static fn ($r) => ['label' => LEAD_SOURCES[$r['source']] ?? ucfirst((string) $r['source']), 'value' => (float) $r['n']],
-        db()->all('SELECT source, COUNT(*) AS n FROM leads WHERE created_at >= ? GROUP BY source ORDER BY n DESC', [$p['from']]));
+        db()->all('SELECT source, COUNT(*) AS n FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ? GROUP BY source ORDER BY n DESC', [$p['from']]));
     $serviceRows = array_map(static fn ($r) => ['label' => $r['s'], 'value' => (float) $r['n'], 'sub' => (float) $r['v'] > 0 ? compact_money($r['v'], $cur) . ' won' : ''],
-        db()->all("SELECT COALESCE(NULLIF(service, ''), 'Not specified') AS s, COUNT(*) AS n, SUM(CASE WHEN status = 'won' THEN value ELSE 0 END) AS v FROM leads WHERE created_at >= ? GROUP BY s ORDER BY n DESC LIMIT 8", [$p['from']]));
+        db()->all("SELECT COALESCE(NULLIF(service, ''), 'Not specified') AS s, COUNT(*) AS n, SUM(CASE WHEN status = 'won' THEN value ELSE 0 END) AS v FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND created_at >= ? GROUP BY s ORDER BY n DESC LIMIT 8", [$p['from']]));
+    $topicRows = array_map(static fn ($r) => ['label' => $r['topic'], 'value' => (float) $r['n']],
+        db()->all("SELECT topic, COUNT(*) AS n FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND topic IS NOT NULL AND topic <> '' AND created_at >= ? GROUP BY topic ORDER BY n DESC LIMIT 8", [$p['from']]));
     $lostRows = array_map(static fn ($r) => ['label' => $r['r'], 'value' => (float) $r['n']],
-        db()->all("SELECT COALESCE(NULLIF(lost_reason, ''), 'No reason given') AS r, COUNT(*) AS n FROM leads WHERE status = 'lost' AND lost_at >= ? GROUP BY r ORDER BY n DESC LIMIT 8", [$p['from']]));
+        db()->all("SELECT COALESCE(NULLIF(lost_reason, ''), 'No reason given') AS r, COUNT(*) AS n FROM leads WHERE (@crm_owner IS NULL OR owner_id = @crm_owner) AND status = 'lost' AND lost_at >= ? GROUP BY r ORDER BY n DESC LIMIT 8", [$p['from']]));
     $owners = db()->all(
         "SELECT u.id, u.name,
             (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.status = 'open') AS open_n,
             (SELECT COALESCE(SUM(l.value), 0) FROM leads l WHERE l.owner_id = u.id AND l.status = 'open') AS open_v,
             (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.status = 'won' AND l.won_at >= ?) AS won_n,
             (SELECT COALESCE(SUM(l.value), 0) FROM leads l WHERE l.owner_id = u.id AND l.status = 'won' AND l.won_at >= ?) AS won_v
-         FROM users u WHERE u.is_active = 1 AND u.role IN ('admin', 'manager', 'sales') ORDER BY won_v DESC, open_v DESC",
+         FROM users u WHERE u.is_active = 1 AND (@crm_owner IS NULL OR u.id = @crm_owner) ORDER BY won_v DESC, open_v DESC",
         [$p['from'], $p['from']]
     );
     $owners = array_values(array_filter($owners, static fn ($o) => (int) $o['open_n'] + (int) $o['won_n'] > 0));
     $followUps = db()->all(
         "SELECT l.*, c.name AS contact_name, c.company AS contact_company FROM leads l LEFT JOIN contacts c ON c.id = l.contact_id
-         WHERE l.status = 'open' AND l.next_follow_up <= ? ORDER BY l.next_follow_up LIMIT 8",
+         WHERE (@crm_owner IS NULL OR l.owner_id = @crm_owner) AND l.status = 'open' AND l.next_follow_up <= ? ORDER BY l.next_follow_up LIMIT 8",
         [date('Y-m-d 23:59:59')]
     );
     $topDeals = db()->all(
         "SELECT l.*, c.name AS contact_name, c.company AS contact_company FROM leads l LEFT JOIN contacts c ON c.id = l.contact_id
-         WHERE l.status = 'open' AND l.value IS NOT NULL ORDER BY l.value DESC LIMIT 6"
+         WHERE (@crm_owner IS NULL OR l.owner_id = @crm_owner) AND l.status = 'open' AND l.value IS NOT NULL ORDER BY l.value DESC LIMIT 6"
     );
     admin_view('dashboard/crm', [
         'title' => 'CRM dashboard', 'nav' => 'crm', 'p' => $p, 'm' => $m, 'cur' => $cur, 'pipeRows' => $pipeRows, 'countRows' => $countRows,
-        'sourceRows' => $sourceRows, 'serviceRows' => $serviceRows, 'lostRows' => $lostRows, 'owners' => $owners,
+        'sourceRows' => $sourceRows, 'serviceRows' => $serviceRows, 'topicRows' => $topicRows, 'lostRows' => $lostRows, 'owners' => $owners,
         'followUps' => $followUps, 'topDeals' => $topDeals, 'weekly' => weekly_counts('leads', 'created_at'),
     ]);
 }

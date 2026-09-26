@@ -1,5 +1,6 @@
 # Automate Limited - Hostinger (LiteSpeed / Apache)
-# PHP pages: the homepage, /careers, /contact, /privacy, the team area at /admin
+# PHP pages: the homepage, /services, /odoo-modules, /how-we-work, /pricing, /faq,
+# /careers, /contact, /privacy, and the team area at /admin
 # and the one-time installer at /install.
 
 DirectoryIndex index.php index.html
@@ -29,6 +30,9 @@ ErrorDocument 404 /404.php
 
   # careers: /careers/odoo-developer -> careers/index.php?job=odoo-developer
   RewriteRule ^careers/([a-z0-9-]+)/?$ careers/index.php?job=$1 [QSA,L]
+
+  # service pages: /services/odoo-erp -> services/index.php?s=odoo-erp
+  RewriteRule ^services/([a-z0-9-]+)/?$ services/index.php?s=$1 [QSA,L]
 
   # team area: every /admin address goes through its front controller
   RewriteCond %{REQUEST_FILENAME} !-f

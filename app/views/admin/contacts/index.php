@@ -1,7 +1,7 @@
 <?php /** @var array $rows @var array $p @var string $q */ ?>
 <div class="phead">
   <div><h1>Contacts</h1><p class="phead__sub">Everyone who has enquired or that you've added. <?= plural($p['total'], 'contact') ?>.</p></div>
-  <div class="phead__actions"><a class="btn btn--primary" href="<?= e(admin_url('contacts/new')) ?>"><?= icon('plus') ?>New contact</a></div>
+  <?php if (user_can('crm.manage')): ?><div class="phead__actions"><a class="btn btn--primary" href="<?= e(admin_url('contacts/new')) ?>"><?= icon('plus') ?>New contact</a></div><?php endif; ?>
 </div>
 <form class="filters" method="get" action="<?= e(admin_url('contacts')) ?>">
   <input class="input" type="search" name="q" value="<?= e($q) ?>" placeholder="Name, email, company, phone" aria-label="Search contacts">
