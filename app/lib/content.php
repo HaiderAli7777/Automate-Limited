@@ -30,6 +30,16 @@ function site_modules(): array
     return $m ??= require APP_DIR . '/content/modules.php';
 }
 
+function site_industries(): array
+{
+    return require APP_DIR . '/content/industries.php';
+}
+
+function site_projects(): array
+{
+    return require APP_DIR . '/content/projects.php';
+}
+
 function site_faq(): array
 {
     static $f = null;

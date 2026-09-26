@@ -68,6 +68,8 @@ JSON, true),
     </div>
   </section>
 
+  <?php partial('site/platforms'); ?>
+
   <section class="sec why" id="why">
     <div class="wrap why__grid">
       <div class="rv">
@@ -130,6 +132,8 @@ JSON, true),
     </div>
   </section>
 
+  <?php partial('site/industries'); ?>
+
   <section class="sec band" id="stack">
     <div class="wrap">
       <div class="sec-head rv">
@@ -140,6 +144,8 @@ JSON, true),
       <p class="more-link rv"><a href="<?= e(url('odoo-modules/')) ?>">See all <?= count(site_modules()) ?> Odoo modules<svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
     </div>
   </section>
+
+  <?php partial('site/projects'); ?>
 
   <section class="sec" id="more">
     <div class="wrap">

@@ -121,7 +121,7 @@ the pipeline stages for both boards (rename, recolour, reorder, add) and every e
 | `index.php` | Homepage |
 | `services/`, `odoo-modules/`, `how-we-work/`, `pricing/`, `faq/` | Website pages |
 | `careers/`, `contact/`, `privacy/` | Careers pages, the enquiry page and its handler, the privacy notice |
-| `app/content/` | Text for the services, Odoo modules and FAQs, edited in one place |
+| `app/content/` | Text for the services, Odoo modules, industries, project examples and FAQs, edited in one place |
 | `admin/` | Front controller for the team area |
 | `install/` | One-time installer (locks itself after use) |
 | `app/` | All PHP code, views and the schema. Never served (`app/.htaccess`) |
