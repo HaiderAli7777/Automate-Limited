@@ -4,6 +4,13 @@
   <div class="panel"><div class="empty"><?= icon('magnifying-glass') ?><h3>No matches.</h3><p>Try part of a name, an email address, a phone number or a company.</p></div></div>
 <?php endif; ?>
 <div class="split--even" style="display:grid;gap:18px">
+  <?php if ($results['employees']): ?>
+  <div class="panel"><div class="panel__head"><h2>Employees</h2></div><div class="list">
+    <?php foreach ($results['employees'] as $emp): ?>
+      <div class="list__item"><?= avatar(employee_name($emp)) ?><div class="list__main"><a class="list__title" href="<?= e(admin_url('employees/' . $emp['id'])) ?>"><?= e(employee_name($emp)) ?></a><span class="list__sub"><?= e(implode(' · ', array_filter([$emp['employee_code'], $emp['designation'], $emp['department_name']]))) ?></span></div><?= badge(EMPLOYEE_STATUSES[$emp['status']] ?? $emp['status'], EMPLOYEE_STATUS_COLORS[$emp['status']] ?? 'slate') ?></div>
+    <?php endforeach; ?>
+  </div></div>
+  <?php endif; ?>
   <?php if ($results['candidates']): ?>
   <div class="panel"><div class="panel__head"><h2>Candidates</h2></div><div class="list">
     <?php foreach ($results['candidates'] as $c): ?>

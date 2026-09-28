@@ -11,6 +11,7 @@ $leadStages = user_can('crm') ? lead_stages() : [];
   <div class="phead__actions">
     <?php if (user_can('ats')): ?><a class="btn btn--quiet" href="<?= e(admin_url('dashboard/ats')) ?>"><?= icon('chart-bar') ?>ATS dashboard</a><?php endif; ?>
     <?php if (user_can('crm')): ?><a class="btn btn--quiet" href="<?= e(admin_url('dashboard/crm')) ?>"><?= icon('chart-line-up') ?>CRM dashboard</a><?php endif; ?>
+    <?php if (user_can('hr.view')): ?><a class="btn btn--quiet" href="<?= e(admin_url('dashboard/hr')) ?>"><?= icon('chart-pie-slice') ?>HR dashboard</a><?php endif; ?>
   </div>
 </div>
 

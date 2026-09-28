@@ -1,6 +1,6 @@
 <?php
 /*
- * Dashboards: an overview for everyone, plus an ATS dashboard and a CRM dashboard.
+ * Dashboards: an overview for everyone, plus ATS, CRM and HR dashboards.
  * Charts are single-series in one hue, server-rendered as HTML; every chart has
  * hover/focus tooltips and a "View as table" twin so no value hides behind a hover.
  */
@@ -99,7 +99,7 @@ function nice_max(float $v): float
  * Column chart over time, one hue. Labels only the latest and the highest column.
  * @param array<int,array{label:string,value:float,tip:string}> $points
  */
-function chart_columns(array $points, string $caption, string $unit = ''): string
+function chart_columns(array $points, string $caption, string $unit = '', string $xHead = 'Week'): string
 {
     if (!$points || array_sum(array_column($points, 'value')) <= 0) {
         return '<div class="empty empty--sm"><p>Nothing recorded in this window yet.</p></div>';
@@ -132,7 +132,7 @@ function chart_columns(array $points, string $caption, string $unit = ''): strin
     }
     return '<div class="cols" role="img" aria-label="' . e($caption) . '"><div class="cols__axis">' . $ticks . '</div>'
         . '<div class="cols__plot"><div class="cols__grid">' . $grid . '</div>' . $cols . '</div><div class="cols__x">' . $xs . '</div></div>'
-        . '<details class="viz-table"><summary>View as table</summary><table><thead><tr><th>Week</th><th>' . e($caption) . '</th></tr></thead><tbody>' . $table . '</tbody></table></details>';
+        . '<details class="viz-table"><summary>View as table</summary><table><thead><tr><th>' . e($xHead) . '</th><th>' . e($caption) . '</th></tr></thead><tbody>' . $table . '</tbody></table></details>';
 }
 
 /** Count rows per week for the last N weeks, from a table's datetime column. */
@@ -366,5 +366,69 @@ function dashboard_crm(): void
         'title' => 'CRM dashboard', 'nav' => 'crm', 'p' => $p, 'm' => $m, 'cur' => $cur, 'pipeRows' => $pipeRows, 'countRows' => $countRows,
         'sourceRows' => $sourceRows, 'serviceRows' => $serviceRows, 'topicRows' => $topicRows, 'lostRows' => $lostRows, 'owners' => $owners,
         'followUps' => $followUps, 'topDeals' => $topDeals, 'weekly' => weekly_counts('leads', 'created_at'),
+    ]);
+}
+
+/* ------------------------------------------------------------------ HR */
+function dashboard_hr(): void
+{
+    $p = dash_period();
+    $pay = user_can('payroll.manage');
+    $cur = (string) setting('default_currency', 'PKR');
+    $m = [
+        'applied' => (int) db()->value('SELECT COUNT(*) FROM applications WHERE applied_at >= ?', [$p['from']]),
+        'applied_prev' => (int) db()->value('SELECT COUNT(*) FROM applications WHERE applied_at >= ? AND applied_at < ?', [$p['prev_from'], $p['from']]),
+        'hired' => (int) db()->value('SELECT COUNT(*) FROM applications WHERE hired_at >= ?', [$p['from']]),
+        'hired_prev' => (int) db()->value('SELECT COUNT(*) FROM applications WHERE hired_at >= ? AND hired_at < ?', [$p['prev_from'], $p['from']]),
+        'headcount' => (int) db()->value("SELECT COUNT(*) FROM employees WHERE status IN ('probation', 'active', 'notice')"),
+        'joiners' => (int) db()->value('SELECT COUNT(*) FROM employees WHERE join_date >= ?', [substr($p['from'], 0, 10)]),
+        'leavers' => (int) db()->value("SELECT COUNT(*) FROM employees WHERE status = 'left' AND exit_date >= ?", [substr($p['from'], 0, 10)]),
+        'probation' => (int) db()->value("SELECT COUNT(*) FROM employees WHERE status = 'probation'"),
+        'pool' => (int) db()->value("SELECT COUNT(*) FROM applications WHERE status = 'pool'"),
+        'open_jobs' => (int) db()->value("SELECT COUNT(*) FROM jobs WHERE status = 'open' AND slug <> 'open-application'"),
+        'ready' => (int) db()->value("SELECT COUNT(*) FROM applications a WHERE a.status = 'hired' AND NOT EXISTS (SELECT 1 FROM employees e WHERE e.application_id = a.id)"),
+    ];
+    $m['month_net'] = $pay ? (float) db()->value('SELECT COALESCE(SUM(net), 0) FROM payslips WHERE period = ?', [date('Y-m')]) : 0.0;
+    $m['month_prev'] = $pay ? (float) db()->value('SELECT COALESCE(SUM(net), 0) FROM payslips WHERE period = ?', [date('Y-m', strtotime('first day of last month'))]) : 0.0;
+    $m['monthly_basic'] = $pay ? (float) db()->value("SELECT COALESCE(SUM(basic_salary), 0) FROM employees WHERE status IN ('probation', 'active', 'notice')") : 0.0;
+
+    // hiring funnel for applications received in the period
+    $funnel = [];
+    $apps = db()->all('SELECT a.id, a.status, (SELECT COUNT(*) FROM interviews i WHERE i.application_id = a.id) AS iv, a.offer_status FROM applications a WHERE a.applied_at >= ?', [$p['from']]);
+    $funnel[] = ['label' => 'Applied', 'value' => count($apps)];
+    $funnel[] = ['label' => 'Interviewed', 'value' => count(array_filter($apps, static fn ($a) => (int) $a['iv'] > 0))];
+    $funnel[] = ['label' => 'Offered', 'value' => count(array_filter($apps, static fn ($a) => in_array($a['offer_status'], ['sent', 'accepted', 'declined'], true) || $a['status'] === 'hired'))];
+    $funnel[] = ['label' => 'Hired', 'value' => count(array_filter($apps, static fn ($a) => $a['status'] === 'hired'))];
+    $funnel[] = ['label' => 'Kept in talent pool', 'value' => count(array_filter($apps, static fn ($a) => $a['status'] === 'pool'))];
+
+    $byDept = array_map(static fn ($r) => ['label' => $r['name'] ?? 'No department', 'value' => (float) $r['n'], 'href' => admin_url('employees') . ($r['id'] ? '?department=' . $r['id'] : '')],
+        db()->all("SELECT d.id, d.name, COUNT(e.id) AS n FROM employees e LEFT JOIN departments d ON d.id = e.department_id WHERE e.status IN ('probation', 'active', 'notice') GROUP BY d.id, d.name ORDER BY n DESC"));
+    $byType = array_map(static fn ($r) => ['label' => EMPLOYMENT_TYPES[$r['employment_type']] ?? $r['employment_type'], 'value' => (float) $r['n']],
+        db()->all("SELECT employment_type, COUNT(*) AS n FROM employees WHERE status IN ('probation', 'active', 'notice') GROUP BY employment_type ORDER BY n DESC"));
+
+    $payTrend = [];
+    if ($pay) {
+        $rows = db()->pairs('SELECT period, SUM(net) FROM payslips WHERE period >= ? GROUP BY period', [date('Y-m', strtotime('first day of -5 months'))]);
+        for ($i = 5; $i >= 0; $i--) {
+            $per = date('Y-m', strtotime('first day of -' . $i . ' months'));
+            $payTrend[] = ['label' => date('M', strtotime($per . '-01')), 'value' => (float) ($rows[$per] ?? 0), 'tip' => period_label($per)];
+        }
+    }
+    $payDept = $pay ? array_map(static fn ($r) => ['label' => $r['department'] ?: 'No department', 'value' => (float) $r['net'], 'display' => compact_money($r['net'], $r['cur'])],
+        db()->all('SELECT department, SUM(net) AS net, MIN(currency) AS cur FROM payslips WHERE period = (SELECT MAX(period) FROM payslips) GROUP BY department ORDER BY net DESC')) : [];
+    $latestPeriod = $pay ? db()->value('SELECT MAX(period) FROM payslips') : null;
+
+    $probationDue = db()->all("SELECT id, first_name, last_name, designation, probation_end FROM employees WHERE status = 'probation' AND probation_end IS NOT NULL AND probation_end <= ? ORDER BY probation_end LIMIT 8", [date('Y-m-d', strtotime('+30 days'))]);
+    $toOnboard = db()->all("SELECT a.id, a.hired_at, c.first_name, c.last_name, j.title FROM applications a JOIN candidates c ON c.id = a.candidate_id JOIN jobs j ON j.id = a.job_id
+        WHERE a.status = 'hired' AND NOT EXISTS (SELECT 1 FROM employees e WHERE e.application_id = a.id) ORDER BY a.hired_at DESC LIMIT 6");
+    $poolDue = db()->all("SELECT a.id, a.revisit_on, a.pool_reason, c.first_name, c.last_name, j.title FROM applications a JOIN candidates c ON c.id = a.candidate_id JOIN jobs j ON j.id = a.job_id
+        WHERE a.status = 'pool' ORDER BY a.revisit_on IS NULL, a.revisit_on LIMIT 6");
+    $recentRuns = $pay ? db()->all('SELECT r.id, r.period, r.title, r.status, (SELECT SUM(net) FROM payslips s WHERE s.run_id = r.id) AS net, (SELECT MIN(currency) FROM payslips s WHERE s.run_id = r.id) AS cur FROM payroll_runs r ORDER BY r.period DESC, r.id DESC LIMIT 5') : [];
+
+    admin_view('dashboard/hr', [
+        'title' => 'HR dashboard', 'nav' => 'hr', 'p' => $p, 'm' => $m, 'pay' => $pay, 'cur' => $cur, 'funnel' => $funnel,
+        'byDept' => $byDept, 'byType' => $byType, 'payTrend' => $payTrend, 'payDept' => $payDept, 'latestPeriod' => $latestPeriod,
+        'probationDue' => $probationDue, 'toOnboard' => $toOnboard, 'poolDue' => $poolDue, 'recentRuns' => $recentRuns,
+        'weekly' => weekly_counts('applications', 'applied_at'),
     ]);
 }

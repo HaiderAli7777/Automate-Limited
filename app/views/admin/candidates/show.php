@@ -29,7 +29,7 @@
           </div>
         <?php endforeach; ?>
       </div>
-      <?php else: ?><div class="empty empty--sm"><p>In the talent pool, not in any pipeline yet.</p></div><?php endif; ?>
+      <?php else: ?><div class="empty empty--sm"><p>Not linked to a job yet. Add them to one below.</p></div><?php endif; ?>
       <?php if ($openJobs && user_can('ats.manage')): ?>
       <form method="post" action="<?= e(admin_url('candidates/' . $c['id'] . '/apply')) ?>" class="panel__foot row">
         <?= csrf_field() ?>

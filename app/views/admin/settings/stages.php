@@ -9,7 +9,7 @@ $colorOpts = static function (string $sel): string {
     return $h;
 };
 $editor = static function (string $which, array $stages, array $counts) use ($colorOpts): void {
-    $kinds = $which === 'crm' ? ['open' => 'Open', 'won' => 'Won', 'lost' => 'Lost'] : ['active' => 'In progress', 'hired' => 'Hired', 'rejected' => 'Rejected'];
+    $kinds = $which === 'crm' ? ['open' => 'Open', 'won' => 'Won', 'lost' => 'Lost'] : ['active' => 'In progress', 'hired' => 'Hired', 'pool' => 'Talent pool', 'rejected' => 'Rejected'];
     $rows = array_values($stages);
     $rows[] = ['id' => 0, 'name' => '', 'color' => 'slate', 'kind' => array_key_first($kinds), 'probability' => 0];
     ?>

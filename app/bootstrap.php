@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
 define('APP_DIR', __DIR__);
-define('APP_VERSION', '2.0.0');
+define('APP_VERSION', '3.0.0');
 
 require APP_DIR . '/lib/helpers.php';
 require APP_DIR . '/lib/Db.php';
@@ -22,6 +22,7 @@ require APP_DIR . '/lib/Mailer.php';
 require APP_DIR . '/lib/uploads.php';
 require APP_DIR . '/lib/markdown.php';
 require APP_DIR . '/lib/domain.php';
+require APP_DIR . '/lib/hr.php';
 require APP_DIR . '/lib/content.php';
 
 final class App

@@ -43,6 +43,7 @@ $link = static function (string $key, string $href, string $icon, string $label,
       <?= $link('jobs', admin_url('jobs'), 'briefcase', 'Jobs') ?>
       <?= $link('candidates', admin_url('candidates'), 'users-three', 'Candidates') ?>
       <?= $link('pipeline', admin_url('pipeline'), 'kanban', 'Hiring pipeline', $counts['new_apps']) ?>
+      <?= $link('pool', admin_url('talent-pool'), 'user-list', 'Talent pool', $counts['pool_due'], $counts['pool_due'] > 0) ?>
       <?= $link('interviews', admin_url('interviews'), 'calendar-dots', 'Interviews', $counts['my_interviews']) ?>
     </nav>
     <?php elseif (user_can('interviews')): ?>
@@ -59,6 +60,16 @@ $link = static function (string $key, string $href, string $icon, string $label,
       <?= $link('leads', admin_url('leads'), 'funnel', 'Leads', $counts['new_leads']) ?>
       <?= $link('leadboard', admin_url('leads/board'), 'kanban', 'Sales pipeline') ?>
       <?= $link('contacts', admin_url('contacts'), 'address-book', 'Contacts') ?>
+    </nav>
+    <?php endif; ?>
+
+    <?php if (user_can('hr.view')): ?>
+    <nav class="side__group" aria-label="People">
+      <p class="side__label">People</p>
+      <?= $link('hr', admin_url('dashboard/hr'), 'chart-pie-slice', 'HR dashboard') ?>
+      <?= $link('employees', admin_url('employees'), 'identification-card', 'Employees', $counts['probation_due'], $counts['probation_due'] > 0) ?>
+      <?= $link('departments', admin_url('departments'), 'buildings', 'Departments') ?>
+      <?php if (user_can('payroll.manage')): ?><?= $link('payroll', admin_url('payroll'), 'currency-circle-dollar', 'Payroll', $counts['draft_slips']) ?><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -83,7 +94,7 @@ $link = static function (string $key, string $href, string $icon, string $label,
       <button class="icon-btn top__menu" type="button" data-nav-toggle aria-controls="side" aria-expanded="false" aria-label="Open navigation"><?= icon('list') ?></button>
       <form class="search-box" action="<?= e(admin_url('search')) ?>" method="get" role="search">
         <?= icon('magnifying-glass') ?>
-        <input type="search" name="q" value="<?= e($nav === 'search' ? input('q') : '') ?>" placeholder="Search candidates, leads, contacts, jobs" aria-label="Search" aria-keyshortcuts="/"><kbd class="search-box__key" aria-hidden="true">/</kbd>
+        <input type="search" name="q" value="<?= e($nav === 'search' ? input('q') : '') ?>" placeholder="Search people, candidates, leads, jobs" aria-label="Search" aria-keyshortcuts="/"><kbd class="search-box__key" aria-hidden="true">/</kbd>
       </form>
       <div class="top__tools">
         <details class="dropdown">
@@ -98,6 +109,11 @@ $link = static function (string $key, string $href, string $icon, string $label,
               <?php if (user_can('ats.manage')): ?><div class="dropdown__sep"></div><?php endif; ?>
               <a href="<?= e(admin_url('leads/new')) ?>"><?= icon('funnel') ?>Lead</a>
               <a href="<?= e(admin_url('contacts/new')) ?>"><?= icon('address-book') ?>Contact</a>
+            <?php endif; ?>
+            <?php if (user_can('hr.manage') || user_can('payroll.manage')): ?>
+              <div class="dropdown__sep"></div>
+              <?php if (user_can('hr.manage')): ?><a href="<?= e(admin_url('employees/new')) ?>"><?= icon('identification-card') ?>Employee</a><?php endif; ?>
+              <?php if (user_can('payroll.manage')): ?><a href="<?= e(admin_url('payroll/new')) ?>"><?= icon('currency-circle-dollar') ?>Payroll run</a><?php endif; ?>
             <?php endif; ?>
             <?php if (user_can('team')): ?>
               <div class="dropdown__sep"></div>

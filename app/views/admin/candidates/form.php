@@ -39,7 +39,7 @@ $action = $isNew ? admin_url('candidates/new') : admin_url('candidates/' . $cand
         <?= fi('tags', 'Tags', $c['tags'] ?? '', ['optional' => true, 'help' => 'Comma separated, e.g. Odoo, Arabic, Senior']) ?>
         <?php if ($isNew): ?>
           <?php $sel = input('job'); ?>
-          <?= fs('job_id', 'Add to job', '<option value="">No job yet (talent pool)</option>' . implode('', array_map(static fn ($j) => '<option value="' . (int) $j['id'] . '"' . selected(fval('job_id', $sel), $j['id']) . '>' . e($j['title']) . '</option>', $jobs)), $sel) ?>
+          <?= fs('job_id', 'Add to job', '<option value="">No job yet</option>' . implode('', array_map(static fn ($j) => '<option value="' . (int) $j['id'] . '"' . selected(fval('job_id', $sel), $j['id']) . '>' . e($j['title']) . '</option>', $jobs)), $sel) ?>
           <?= fs('stage_id', 'Starting stage', array_map(static fn ($s) => $s['name'], ats_stages()), (string) first_stage_id(ats_stages(), 'active')) ?>
           <div class="field"><label for="f-resume">CV <span class="opt">(optional)</span></label><input class="input" id="f-resume" type="file" name="resume" accept=".pdf,.doc,.docx,.rtf"><?php $er = form_errors(); if (!empty($er['resume'])): ?><p class="error"><?= e($er['resume']) ?></p><?php endif; ?></div>
           <?= ft('note', 'First note', '', ['optional' => true, 'attrs' => ['rows' => 3], 'placeholder' => 'How you found them, who referred them']) ?>

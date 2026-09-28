@@ -35,6 +35,7 @@ $home = !empty($home);
           <li><a href="mailto:info@automateltd.com">info@automateltd.com</a></li>
           <li><a href="<?= e(url('contact/')) ?>">Send us a message</a></li>
         </ul>
+        <address class="ftr__addr"><a href="<?= e(OFFICE['maps']) ?>" target="_blank" rel="noopener"><?= implode('<br>', array_map('e', office_lines())) ?></a></address>
       </div>
     </div>
     <div class="ftr__base">

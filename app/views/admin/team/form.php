@@ -14,7 +14,7 @@ if (has_old() && $role !== 'custom') {
     $current = $role === 'admin' ? all_permissions() : (ROLE_PRESETS[$role] ?? []);
 }
 $presetJson = static fn (string $key): string => json_encode($key === 'admin' ? all_permissions() : ($key === 'custom' ? null : (ROLE_PRESETS[$key] ?? [])));
-$roleIcon = ['admin' => 'shield-check', 'manager' => 'user-gear', 'recruiter' => 'briefcase', 'sales' => 'funnel', 'interviewer' => 'calendar-dots', 'viewer' => 'eye', 'custom' => 'sliders-horizontal'];
+$roleIcon = ['admin' => 'shield-check', 'manager' => 'user-gear', 'hr' => 'identification-card', 'recruiter' => 'briefcase', 'sales' => 'funnel', 'interviewer' => 'calendar-dots', 'viewer' => 'eye', 'custom' => 'sliders-horizontal'];
 ?>
 <a class="crumb" href="<?= e(admin_url('team')) ?>"><?= icon('arrow-left') ?>Team and access</a>
 <div class="phead">

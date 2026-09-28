@@ -2,6 +2,28 @@
 /* Marketing content for the public pages: services, Odoo modules and FAQs. */
 declare(strict_types=1);
 
+/** The office. Shown in the footer and on the contact page, and given to search engines. */
+const OFFICE = [
+    'name' => 'Foundry Co-working Space',
+    'street' => 'Chohan Tower, 16 Jail Road, Shadman II',
+    'area' => 'Shadman',
+    'city' => 'Lahore',
+    'postcode' => '54000',
+    'country' => 'Pakistan',
+    'maps' => 'https://www.google.com/maps/search/?api=1&query=Foundry+Co-working+Space+Chohan+Tower+16+Jail+Road+Shadman+Lahore',
+];
+
+function office_lines(): array
+{
+    return [OFFICE['name'], OFFICE['street'], OFFICE['city'] . ' ' . OFFICE['postcode'] . ', ' . OFFICE['country']];
+}
+
+function office_jsonld(): array
+{
+    return ['@type' => 'PostalAddress', 'streetAddress' => OFFICE['name'] . ', ' . OFFICE['street'], 'addressLocality' => OFFICE['city'],
+        'addressRegion' => 'Punjab', 'postalCode' => OFFICE['postcode'], 'addressCountry' => 'PK'];
+}
+
 function site_services(): array
 {
     static $s = null;

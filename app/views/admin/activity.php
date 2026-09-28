@@ -1,5 +1,5 @@
 <?php /** @var array $rows  @var array $p  @var array $subjects */
-$typeColour = ['application' => 'teal', 'candidate' => 'cyan', 'lead' => 'amber', 'contact' => 'orange', 'user' => 'violet'];
+$typeColour = ['application' => 'teal', 'candidate' => 'cyan', 'lead' => 'amber', 'contact' => 'orange', 'employee' => 'green', 'payroll' => 'blue', 'user' => 'violet'];
 $lastDay = '';
 ?>
 <div class="phead">

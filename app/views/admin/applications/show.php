@@ -47,6 +47,8 @@ foreach ($interviews as $iv) {
         <button type="button" class="<?= e($cls) ?>" disabled<?= $isCurrent ? ' aria-current="step"' : '' ?>><?= e($s['name']) ?></button>
       <?php elseif ($s['kind'] === 'rejected' && !$isCurrent): ?>
         <button type="button" class="<?= e($cls) ?>" data-open-dialog="rejectOneDialog" data-stage="<?= (int) $sid ?>"><?= e($s['name']) ?></button>
+      <?php elseif ($s['kind'] === 'pool' && !$isCurrent): ?>
+        <button type="button" class="<?= e($cls) ?>" data-open-dialog="poolOneDialog"><?= e($s['name']) ?></button>
       <?php else: ?>
         <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/stage')) ?>"><?= csrf_field() ?><input type="hidden" name="stage_id" value="<?= (int) $sid ?>">
           <button type="submit" class="<?= e($cls) ?>"<?= $isCurrent ? ' aria-current="step" disabled' : '' ?>><?= e($s['name']) ?></button></form>
@@ -54,6 +56,16 @@ foreach ($interviews as $iv) {
     <?php endforeach; ?>
   </div>
   <?php if ($app['status'] === 'rejected' && $app['rejection_reason']): ?><p class="small muted" style="margin-top:10px">Not moving forward: <?= e($app['rejection_reason']) ?>, <?= e(fmt_date($app['rejected_at'])) ?>.</p><?php endif; ?>
+  <?php if ($app['status'] === 'pool'): ?>
+    <div class="notice notice--info poolnote"><?= icon('user-list') ?><div><strong>In the talent pool</strong> since <?= e(fmt_date($app['pooled_at'])) ?><?= $app['pool_reason'] ? ': ' . e($app['pool_reason']) : '' ?>.<?php if ($app['revisit_on']): ?> Revisit on <strong><?= e(fmt_date($app['revisit_on'])) ?></strong>.<?php endif; ?><?php if ($app['pool_note']): ?><br><span class="small"><?= e($app['pool_note']) ?></span><?php endif; ?> Move them to any stage above when the time is right.</div></div>
+  <?php endif; ?>
+  <?php if ($app['status'] === 'hired' && user_can('hr.view')): $empId = db()->value('SELECT id FROM employees WHERE application_id = ?', [(int) $app['id']]); ?>
+    <div class="notice notice--ok poolnote"><?= icon('identification-card') ?><div>
+      <?php if ($empId): ?><strong>Now an employee.</strong> <a class="link" href="<?= e(admin_url('employees/' . $empId)) ?>">Open their employee profile</a>.
+      <?php elseif (user_can('hr.manage')): ?><strong>Hired.</strong> Create their employee profile to add them to payroll. <a class="btn btn--primary btn--sm" style="margin-left:8px" href="<?= e(admin_url('employees/new') . '?application=' . $app['id']) ?>"><?= icon('user-plus') ?>Convert to employee</a>
+      <?php else: ?><strong>Hired.</strong> Ask HR to create their employee profile.<?php endif; ?>
+    </div></div>
+  <?php endif; ?>
 </div></div>
 <?php endif; ?>
 
@@ -206,6 +218,7 @@ foreach ($interviews as $iv) {
   </form>
 </dialog>
 
+<?php partial('admin/partials/pool-dialog', ['id' => 'poolOneDialog', 'method' => 'post', 'action' => admin_url('applications/' . $app['id'] . '/stage'), 'stageId' => first_stage_id($stages, 'pool')]); ?>
 <dialog class="modal" id="rejectOneDialog" aria-labelledby="rejectOneTitle">
   <form method="post" action="<?= e(admin_url('applications/' . $app['id'] . '/stage')) ?>">
     <?= csrf_field() ?>

@@ -11,6 +11,7 @@ declare(strict_types=1);
 const ROLES = [
     'admin' => 'Administrator',
     'manager' => 'Manager',
+    'hr' => 'HR manager',
     'recruiter' => 'Recruiter',
     'sales' => 'Sales',
     'interviewer' => 'Interviewer',
@@ -21,6 +22,7 @@ const ROLES = [
 const ROLE_HELP = [
     'admin' => 'Everything, including team members, access rights and settings.',
     'manager' => 'Runs recruitment and sales, exports and deletes. No team or settings.',
+    'hr' => 'Recruitment, employee profiles and payroll. No sales, team or settings.',
     'recruiter' => 'Jobs, candidates, the hiring pipeline and interviews.',
     'sales' => 'Leads, contacts and the sales pipeline.',
     'interviewer' => 'Only the interviews they sit on, the CV, and their own scorecards.',
@@ -42,6 +44,11 @@ const PERMISSION_GROUPS = [
         'crm.manage' => 'Add and edit leads and contacts, log activity, email contacts and move deals',
         'crm.all' => 'See every lead. When off, they only see leads assigned to them',
     ],
+    'People (HR)' => [
+        'hr.view' => 'See employee profiles, departments and the HR dashboard',
+        'hr.manage' => 'Add and edit employees, convert hires into employees, manage departments',
+        'payroll.manage' => 'See salaries, run payroll, edit and confirm payslips',
+    ],
     'Data' => [
         'data.export' => 'Export lists to CSV',
         'data.delete' => 'Delete jobs, candidates, leads and contacts',
@@ -54,7 +61,8 @@ const PERMISSION_GROUPS = [
 ];
 
 const ROLE_PRESETS = [
-    'manager' => ['ats.view', 'ats.manage', 'interviews.own', 'crm.view', 'crm.manage', 'crm.all', 'data.export', 'data.delete', 'audit.view'],
+    'manager' => ['ats.view', 'ats.manage', 'interviews.own', 'crm.view', 'crm.manage', 'crm.all', 'hr.view', 'data.export', 'data.delete', 'audit.view'],
+    'hr' => ['ats.view', 'ats.manage', 'interviews.own', 'hr.view', 'hr.manage', 'payroll.manage', 'data.export'],
     'recruiter' => ['ats.view', 'ats.manage', 'interviews.own', 'data.export'],
     'sales' => ['crm.view', 'crm.manage', 'crm.all', 'data.export'],
     'interviewer' => ['interviews.own'],
@@ -62,7 +70,7 @@ const ROLE_PRESETS = [
 ];
 
 /** A permission that only makes sense with another one switches that one on too. */
-const PERMISSION_REQUIRES = ['ats.manage' => 'ats.view', 'crm.manage' => 'crm.view', 'crm.all' => 'crm.view'];
+const PERMISSION_REQUIRES = ['ats.manage' => 'ats.view', 'crm.manage' => 'crm.view', 'crm.all' => 'crm.view', 'hr.manage' => 'hr.view', 'payroll.manage' => 'hr.view'];
 
 /** Shorter names used around the code base. */
 const PERMISSION_ALIASES = ['ats' => 'ats.view', 'crm' => 'crm.view', 'team' => 'team.manage', 'settings' => 'settings.manage'];
@@ -256,6 +264,7 @@ function access_summary(array $user): array
         'Recruitment' => $level(user_can('ats.view', $user), user_can('ats.manage', $user)),
         'Interviews' => user_can('interviews', $user) ? 'Yes' : 'No',
         'Sales' => $crm,
+        'People' => user_can('payroll.manage', $user) ? 'Full, with payroll' : $level(user_can('hr.view', $user), user_can('hr.manage', $user)),
         'Also' => $extra ? implode(', ', $extra) : '',
     ];
 }

@@ -1,7 +1,7 @@
 <?php
 /** @var string $tab @var array $templates */
 partial('admin/settings/_tabs', ['tab' => $tab]);
-$groups = ['ats' => 'Recruitment', 'crm' => 'Sales'];
+$groups = ['ats' => 'Recruitment', 'crm' => 'Sales', 'hr' => 'People and payroll'];
 ?>
 <div class="split--even" style="display:grid;gap:18px">
 <?php foreach ($groups as $mod => $label): ?>

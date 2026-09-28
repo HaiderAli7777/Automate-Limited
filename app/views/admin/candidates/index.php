@@ -1,6 +1,6 @@
 <?php /** @var array $rows @var array $p @var array $jobs */ $stages = ats_stages(); $bulk = user_can('ats.manage'); ?>
 <div class="phead">
-  <div><h1>Candidates</h1><p class="phead__sub"><?= plural($p['total'], 'result') ?>. One row per application; people without one are in the talent pool.</p></div>
+  <div><h1>Candidates</h1><p class="phead__sub"><?= plural($p['total'], 'result') ?>. One row per application. Good people you can't hire yet sit in the talent pool.</p></div>
   <div class="phead__actions">
     <?php if (user_can('data.export')): ?><a class="btn btn--quiet" href="<?= e(admin_url('candidates/export') . qs()) ?>"><?= icon('download-simple') ?>Export CSV</a><?php endif; ?>
     <?php if ($bulk): ?><a class="btn btn--primary" href="<?= e(admin_url('candidates/new')) ?>"><?= icon('user-plus') ?>Add candidate</a><?php endif; ?>
@@ -10,7 +10,7 @@
   <input class="input" type="search" name="q" value="<?= e(input('q')) ?>" placeholder="Name, email, phone, company, tag" aria-label="Search">
   <select class="select" name="job" aria-label="Job"><option value="">All jobs</option><?php foreach ($jobs as $j): ?><option value="<?= (int) $j['id'] ?>"<?= selected(input('job'), $j['id']) ?>><?= e($j['title']) ?><?= $j['status'] !== 'open' ? ' (' . e(JOB_STATUSES[$j['status']]) . ')' : '' ?></option><?php endforeach; ?></select>
   <select class="select" name="stage" aria-label="Stage"><option value="">All stages</option><?php foreach ($stages as $s): ?><option value="<?= (int) $s['id'] ?>"<?= selected(input('stage'), $s['id']) ?>><?= e($s['name']) ?></option><?php endforeach; ?></select>
-  <select class="select" name="status" aria-label="Status"><?= options(['' => 'Any status', 'active' => 'In process', 'hired' => 'Hired', 'rejected' => 'Rejected', 'pool' => 'Talent pool'], input('status')) ?></select>
+  <select class="select" name="status" aria-label="Status"><?= options(['' => 'Any status', 'active' => 'In process', 'pool' => 'Talent pool', 'hired' => 'Hired', 'rejected' => 'Rejected', 'none' => 'Not applied to a job'], input('status')) ?></select>
   <select class="select" name="source" aria-label="Source"><?= options(['' => 'Any source'] + CANDIDATE_SOURCES, input('source')) ?></select>
   <button class="btn btn--quiet btn--sm" type="submit">Filter</button>
   <?php if (qs(['page' => null]) !== ''): ?><a class="btn btn--ghost btn--sm" href="<?= e(admin_url('candidates')) ?>">Clear</a><?php endif; ?>
@@ -21,6 +21,10 @@
     <span class="bulkbar__count" data-bulk-count>0 selected</span>
     <label class="sr-only" for="bulk-stage">Move to stage</label>
     <select class="select select--sm" id="bulk-stage" name="stage_id" data-bulk-stage required><option value="">Move to stage...</option><?php foreach ($stages as $s): ?><option value="<?= (int) $s['id'] ?>" data-kind="<?= e($s['kind']) ?>"><?= e($s['name']) ?></option><?php endforeach; ?></select>
+    <span class="row" data-bulk-pool hidden>
+      <select class="select select--sm" name="reason" aria-label="Why not now"><?php foreach (POOL_REASONS as $r): ?><option><?= e($r) ?></option><?php endforeach; ?></select>
+      <input class="input input--sm" type="date" name="revisit_on" aria-label="Revisit on" title="Revisit on (optional)" style="width:auto">
+    </span>
     <span class="row" data-bulk-rejected hidden>
       <select class="select select--sm" name="reason" aria-label="Reason"><?php foreach (REJECTION_REASONS as $r): ?><option><?= e($r) ?></option><?php endforeach; ?></select>
       <label class="checkbox small"><input type="checkbox" name="notify" value="1" checked><span>Email them</span></label>
@@ -39,7 +43,7 @@
       <tr>
         <?php if ($bulk): ?><td class="tbl__check"><?php if ($r['app_id']): ?><input type="checkbox" name="ids[]" value="<?= (int) $r['app_id'] ?>" data-bulk-item aria-label="Select <?= e($name) ?>"><?php endif; ?></td><?php endif; ?>
         <td><div class="person"><?= avatar($name) ?><span><a class="t-strong" href="<?= e($href) ?>"><?= e($name) ?></a><span class="t-sub"><?= e(implode(' · ', array_filter([$r['current_title'], $r['location']])) ?: $r['email']) ?></span></span></div></td>
-        <td><?= $r['job_title'] ? e($r['job_title']) : '<span class="muted">Talent pool</span>' ?></td>
+        <td><?= $r['job_title'] ? e($r['job_title']) : '<span class="muted">No job yet</span>' ?></td>
         <td><?= $r['app_id'] ? stage_badge($stages[(int) $r['stage_id']] ?? null) : '' ?></td>
         <td><?= $r['avg_rating'] ? stars((float) $r['avg_rating']) : '<span class="muted">-</span>' ?></td>
         <td class="nowrap muted"><?= e(fmt_date($r['applied_at'] ?? $r['created_at'])) ?></td>

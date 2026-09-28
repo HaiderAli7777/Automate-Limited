@@ -47,6 +47,10 @@ partial('site/head', [
           <p>Prefer email?</p>
           <a href="mailto:info@automateltd.com?subject=Enquiry%20from%20automateltd.com"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>info@automateltd.com</a>
         </div>
+        <div class="enquiry__direct">
+          <p>Visit us</p>
+          <a href="<?= e(OFFICE['maps']) ?>" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-map-pin"/></svg><span><?= implode('<br>', array_map('e', office_lines())) ?></span></a>
+        </div>
         <div class="enquiry__links">
           <a href="<?= e(url('pricing/')) ?>"><svg class="ic" aria-hidden="true"><use href="#i-hand-coins"/></svg><span><b>How pricing works</b>Projects, retainers and blocks of hours</span></a>
           <a href="<?= e(url('careers/')) ?>"><svg class="ic" aria-hidden="true"><use href="#i-briefcase"/></svg><span><b>Looking for a job?</b>See open roles on the careers page</span></a>

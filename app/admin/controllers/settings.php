@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 const SETTING_TEXT = ['company_name', 'timezone', 'default_currency', 'hr_email', 'sales_email', 'mail_transport', 'mail_from_email',
-    'mail_from_name', 'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username', 'lead_services', 'upload_max_mb', 'lead_default_owner', 'privacy_email'];
+    'mail_from_name', 'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username', 'lead_services', 'upload_max_mb', 'lead_default_owner', 'privacy_email',
+    'employee_code_prefix', 'probation_months'];
 const SETTING_FLAGS = ['notify_new_application', 'notify_new_inquiry', 'autoreply_application', 'autoreply_inquiry'];
 
 function settings_page(): void
@@ -48,6 +49,8 @@ function settings_save(): void
     $in['smtp_port'] = (string) max(1, min(65535, (int) $in['smtp_port'] ?: 465));
     $in['upload_max_mb'] = (string) max(1, min(50, (int) $in['upload_max_mb'] ?: 8));
     $in['lead_default_owner'] = (string) (int) $in['lead_default_owner'];
+    $in['employee_code_prefix'] = mb_substr(preg_replace('/[^A-Za-z0-9\-\/]/', '', $in['employee_code_prefix']) ?: 'AL-', 0, 8);
+    $in['probation_months'] = (string) max(0, min(12, (int) $in['probation_months']));
     $in['default_currency'] = in_array($in['default_currency'], currencies(), true) ? $in['default_currency'] : 'PKR';
     $in['lead_services'] = implode("\n", array_slice(array_filter(array_map(static fn ($s) => mb_substr(trim($s), 0, 80), explode("\n", $in['lead_services']))), 0, 30));
     if ($errors) {
@@ -91,7 +94,7 @@ function stages_save(): void
 {
     $which = input('pipeline') === 'crm' ? 'crm' : 'ats';
     $table = $which === 'crm' ? 'lead_stages' : 'ats_stages';
-    $kinds = $which === 'crm' ? ['open', 'won', 'lost'] : ['active', 'hired', 'rejected'];
+    $kinds = $which === 'crm' ? ['open', 'won', 'lost'] : ['active', 'hired', 'rejected', 'pool'];
     $usage = $which === 'crm' ? db()->pairs('SELECT stage_id, COUNT(*) FROM leads GROUP BY stage_id') : db()->pairs('SELECT stage_id, COUNT(*) FROM applications GROUP BY stage_id');
 
     $ids = input_array('id');
@@ -155,7 +158,7 @@ function stages_save(): void
     if ($which === 'crm') {
         db()->run("UPDATE leads l JOIN lead_stages s ON s.id = l.stage_id SET l.status = CASE s.kind WHEN 'won' THEN 'won' WHEN 'lost' THEN 'lost' ELSE 'open' END");
     } else {
-        db()->run("UPDATE applications a JOIN ats_stages s ON s.id = a.stage_id SET a.status = CASE s.kind WHEN 'hired' THEN 'hired' WHEN 'rejected' THEN 'rejected' ELSE 'active' END");
+        db()->run("UPDATE applications a JOIN ats_stages s ON s.id = a.stage_id SET a.status = CASE s.kind WHEN 'hired' THEN 'hired' WHEN 'rejected' THEN 'rejected' WHEN 'pool' THEN 'pool' ELSE 'active' END");
     }
     flash('success', ($which === 'crm' ? 'Sales' : 'Hiring') . ' pipeline saved.');
     redirect(admin_url('settings/stages'));

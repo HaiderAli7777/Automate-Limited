@@ -125,7 +125,7 @@
      into a "Rejected" or "Lost" column ask for a reason first. */
   all("[data-board]").forEach(function (board) {
     var url = board.getAttribute("data-move-url");
-    var dialog = $(board.getAttribute("data-reason-dialog") || "");
+    var defaultDialog = $(board.getAttribute("data-reason-dialog") || "");
     var dragged = null, fromList = null, nextSibling = null;
     var money = board.getAttribute("data-currency") || "";
 
@@ -150,7 +150,8 @@
     }
     function askReason(kind) {
       return new Promise(function (resolve) {
-        if (!dialog || (kind !== "rejected" && kind !== "lost")) { resolve({}); return; }
+        var dialog = $(board.getAttribute("data-dialog-" + kind) || "") || ((kind === "rejected" || kind === "lost") ? defaultDialog : null);
+        if (!dialog) { resolve({}); return; }
         var form = dialog.querySelector("form");
         form.reset();
         dialog.showModal();
@@ -370,7 +371,8 @@
       if (has("data.export")) also.push("Export");
       if (has("data.delete")) also.push("Delete");
       if (has("audit.view")) also.push("Activity log");
-      var rows = [["Recruitment", level(has("ats.view"), has("ats.manage"))], ["Interviews", has("interviews.own") || has("ats.view") ? "Yes" : "No"], ["Sales", sales]];
+      var people = has("payroll.manage") ? "Full, with payroll" : level(has("hr.view"), has("hr.manage"));
+      var rows = [["Recruitment", level(has("ats.view"), has("ats.manage"))], ["Interviews", has("interviews.own") || has("ats.view") ? "Yes" : "No"], ["Sales", sales], ["People", people]];
       if (also.length) rows.push(["Also", also.join(", ")]);
       summary.innerHTML = "";
       rows.forEach(function (r) {
@@ -442,7 +444,14 @@
       if (!stage) return;
       var opt = stage.options[stage.selectedIndex];
       var kind = opt ? opt.getAttribute("data-kind") : "";
-      all("[data-bulk-rejected]", wrap).forEach(function (el) { el.hidden = kind !== "rejected" && kind !== "lost"; });
+      all("[data-bulk-rejected]", wrap).forEach(function (el) {
+        el.hidden = kind !== "rejected" && kind !== "lost";
+        all("select, input", el).forEach(function (i) { i.disabled = el.hidden; });
+      });
+      all("[data-bulk-pool]", wrap).forEach(function (el) {
+        el.hidden = kind !== "pool";
+        all("select, input", el).forEach(function (i) { i.disabled = el.hidden; });
+      });
     }
     if (stage) { stage.addEventListener("change", syncStage); syncStage(); }
     sync();
@@ -468,6 +477,89 @@
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     var box = document.querySelector('.search-box input');
     if (box && box.offsetParent !== null) { e.preventDefault(); box.focus(); box.select(); }
+  });
+
+  /* ------------------------------------------------------------ allowances and deductions editor */
+  all("[data-lines]").forEach(function (wrap) {
+    var basic = parseFloat(wrap.getAttribute("data-basic")) || 0;
+    var tpl = wrap.querySelector("template[data-line-template]");
+    var netEl = wrap.querySelector('[data-sum="net"]');
+    var cur = netEl ? netEl.getAttribute("data-currency") : "";
+    function fmt(v) { return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function num(v) { var n = parseFloat(String(v).replace(/,/g, "")); return isNaN(n) ? 0 : n; }
+    function sync() {
+      var sums = { allowance: 0, deduction: 0 };
+      all("[data-group]", wrap).forEach(function (g) {
+        var type = g.getAttribute("data-group"), rows = all("[data-line]", g);
+        rows.forEach(function (r) { sums[type] += num(r.querySelector("[data-line-amount]").value); });
+        var empty = g.querySelector(".lines__empty");
+        if (empty) empty.hidden = rows.length > 0;
+        var out = g.querySelector('[data-sum="' + type + '"]');
+        if (out) out.textContent = (type === "deduction" ? "- " : "+ ") + fmt(sums[type]);
+      });
+      var gross = wrap.querySelector('[data-sum="gross"]');
+      if (gross) gross.textContent = cur + " " + fmt(basic + sums.allowance);
+      if (netEl) {
+        var net = basic + sums.allowance - sums.deduction;
+        netEl.textContent = cur + " " + fmt(net);
+        netEl.classList.toggle("is-negative", net < 0);
+      }
+    }
+    wrap.addEventListener("input", function (e) { if (e.target.hasAttribute("data-line-amount")) sync(); });
+    wrap.addEventListener("click", function (e) {
+      var add = e.target.closest("[data-add-line]");
+      if (add && tpl) {
+        var type = add.getAttribute("data-add-line");
+        var node = tpl.content.firstElementChild.cloneNode(true);
+        node.querySelector('input[type="hidden"]').value = type;
+        var label = node.querySelector('input:not([type="hidden"]):not([data-line-amount])');
+        label.value = add.getAttribute("data-label") || "";
+        wrap.querySelector('[data-group="' + type + '"] [data-line-list]').insertBefore(node, wrap.querySelector('[data-group="' + type + '"] .lines__empty'));
+        (label.value ? node.querySelector("[data-line-amount]") : label).focus();
+        sync();
+      }
+      var rm = e.target.closest("[data-remove-line]");
+      if (rm) { rm.closest("[data-line]").remove(); sync(); }
+    });
+    sync();
+  });
+
+  /* ------------------------------------------------------------ employee status dialog */
+  all("[data-status-to]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var d = $("statusDialog");
+      if (!d) return;
+      var to = btn.getAttribute("data-status-to");
+      d.querySelector("[data-status-field]").value = to;
+      d.querySelector("[data-status-heading]").textContent = btn.getAttribute("data-status-title") || "Change status";
+      all("[data-status-only]", d).forEach(function (el) { el.hidden = el.getAttribute("data-status-only") !== to; });
+      if (!d.open && d.showModal) d.showModal();
+    });
+  });
+  all("[data-status-select]").forEach(function (sel) {
+    var fields = document.querySelector("[data-exit-fields]");
+    function sync() { if (fields) fields.hidden = sel.value !== "left"; }
+    sel.addEventListener("change", sync);
+    sync();
+  });
+
+  /* ------------------------------------------------------------ payroll: preview who will be paid */
+  all("[data-payroll-form]").forEach(function (form) {
+    function scope() { var c = form.querySelector('input[name="scope"]:checked'); return c ? c.value : "all"; }
+    function syncScope() {
+      all("[data-scope-only]", form).forEach(function (el) { el.hidden = el.getAttribute("data-scope-only") !== scope(); });
+    }
+    form.addEventListener("change", function (e) {
+      if (!e.target.hasAttribute("data-preview-field")) return;
+      syncScope();
+      var q = new URLSearchParams();
+      q.set("period", form.querySelector('[name="period"]').value);
+      q.set("scope", scope());
+      if (scope() === "department") q.set("department", form.querySelector('[name="department"]').value);
+      if (scope() === "employee") q.set("employee", form.querySelector('[name="employee"]').value);
+      if (scope() === "all" || q.get("department") || q.get("employee")) window.location.href = form.getAttribute("action") + "?" + q.toString();
+    });
+    syncScope();
   });
 
   /* ------------------------------------------------------------ copy buttons */

@@ -6,7 +6,7 @@ $activeCount = count(array_filter($all, static fn ($u) => (int) $u['is_active'] 
 $offCount = count($all) - $activeCount;
 $adminCount = count(array_filter($all, static fn ($u) => (int) $u['is_active'] === 1 && $u['role'] === 'admin'));
 $pendingCount = count(array_filter($all, static fn ($u) => (int) $u['is_active'] === 1 && !$u['last_login_at']));
-$roleColour = ['admin' => 'violet', 'manager' => 'blue', 'recruiter' => 'teal', 'sales' => 'amber', 'interviewer' => 'cyan', 'viewer' => 'slate', 'custom' => 'pink'];
+$roleColour = ['admin' => 'violet', 'manager' => 'blue', 'recruiter' => 'teal', 'sales' => 'amber', 'hr' => 'green', 'interviewer' => 'cyan', 'viewer' => 'slate', 'custom' => 'pink'];
 $level = static function (string $v): string {
     if ($v === 'None' || $v === 'No') {
         return '<span class="acc acc--none">' . e($v) . '</span>';
@@ -40,7 +40,7 @@ $level = static function (string $v): string {
   <?php else: ?>
   <div class="table-wrap">
     <table class="tbl tbl--team">
-      <thead><tr><th>Team member</th><th>Access level</th><th>Recruitment</th><th>Interviews</th><th>Sales</th><th>Last sign-in</th><th><span class="sr-only">Actions</span></th></tr></thead>
+      <thead><tr><th>Team member</th><th>Access level</th><th>Recruitment</th><th>Interviews</th><th>Sales</th><th>People</th><th>Last sign-in</th><th><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
       <?php foreach ($users as $u): $sum = access_summary($u); $editable = team_editable($u); $isMe = (int) $u['id'] === auth_id(); ?>
         <tr class="<?= (int) $u['is_active'] ? '' : 'is-off' ?>">
@@ -56,6 +56,7 @@ $level = static function (string $v): string {
           <td><?= $level($sum['Recruitment']) ?></td>
           <td><?= $level($sum['Interviews']) ?></td>
           <td><?= $level($sum['Sales']) ?></td>
+          <td><?= $level($sum['People']) ?></td>
           <td class="muted nowrap"><?= $u['last_login_at'] ? e(time_ago($u['last_login_at'])) : ((int) $u['is_active'] ? 'Invited, not yet' : 'Never') ?></td>
           <td class="t-right">
             <?php if ($editable): ?>

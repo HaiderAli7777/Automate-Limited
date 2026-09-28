@@ -1,6 +1,0 @@
-# private runtime data: config, uploaded CVs and logs
-/app/storage/*
-!/app/storage/.htaccess
-/automate-private/
-node_modules/
-.DS_Store

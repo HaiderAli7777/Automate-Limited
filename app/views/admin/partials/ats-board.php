@@ -19,7 +19,7 @@ foreach ($stages as $s) {
 <?php if (!$canMove): ?><p class="board-note"><?= icon('eye', 'ic ic--sm') ?> View only. Your access doesn't include moving candidates.</p><?php else: ?>
 <p class="board-note">Drag a card to move it. Moving someone to <?= e(implode(' or ', array_column(array_filter($stages, static fn ($s) => $s['kind'] === 'rejected'), 'name')) ?: 'a rejected stage') ?> asks for a reason.</p>
 <?php endif; ?>
-<div class="board<?= $canMove ? '' : ' board--readonly' ?>"<?= $canMove ? ' data-board' : '' ?> data-move-url="<?= e(admin_url('applications/{id}/stage')) ?>" data-reason-dialog="rejectDialog">
+<div class="board<?= $canMove ? '' : ' board--readonly' ?>"<?= $canMove ? ' data-board data-dialog-pool="poolDialog"' : '' ?> data-move-url="<?= e(admin_url('applications/{id}/stage')) ?>" data-reason-dialog="rejectDialog">
   <?php foreach ($stages as $sid => $s): $cards = $byStage[$sid]; ?>
     <section class="bcol" style="--dot:<?= stage_dot($s['color']) ?>" aria-label="<?= e($s['name']) ?>">
       <header class="bcol__head"><span class="bcol__dot"></span><h3 class="bcol__name"><?= e($s['name']) ?></h3><span class="bcol__count"><?= count($cards) ?></span></header>
@@ -61,4 +61,5 @@ foreach ($stages as $s) {
     <div class="modal__foot"><button class="btn btn--ghost" type="button" data-close-dialog>Cancel</button><button class="btn btn--primary" type="submit">Move</button></div>
   </form>
 </dialog>
+<?php partial('admin/partials/pool-dialog', ['id' => 'poolDialog', 'method' => 'dialog']); ?>
 <?php endif; ?>

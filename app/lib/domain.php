@@ -14,6 +14,8 @@ const QUESTION_TYPES = ['text' => 'Short answer', 'textarea' => 'Long answer', '
 const CANDIDATE_SOURCES = ['careers' => 'Careers page', 'referral' => 'Referral', 'linkedin' => 'LinkedIn', 'job_board' => 'Job board', 'agency' => 'Agency', 'walk_in' => 'Walk-in', 'other' => 'Other'];
 const REJECTION_REASONS = ['Not enough experience', 'Skills don\'t match the role', 'Salary expectations', 'Position filled', 'Candidate withdrew', 'Didn\'t pass the assessment', 'No response from candidate', 'Other'];
 
+const POOL_REASONS = ['Salary expectation above budget', 'More experienced than the role needs', 'No opening right now', 'Strong fit for a future role', 'Timing (notice period or availability)', 'Other'];
+
 const INTERVIEW_TYPES = ['phone' => 'Phone screen', 'video' => 'Video call', 'onsite' => 'In person', 'technical' => 'Technical', 'hr' => 'HR', 'final' => 'Final'];
 const INTERVIEW_STATUSES = ['scheduled' => 'Scheduled', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'no_show' => 'No-show'];
 const INTERVIEW_STATUS_COLORS = ['scheduled' => 'blue', 'completed' => 'green', 'cancelled' => 'slate', 'no_show' => 'red'];
@@ -147,6 +149,7 @@ function fill_template(string $text, array $vars): string
 const TEMPLATE_VARS = [
     'ats' => ['candidate_name', 'candidate_first_name', 'job_title', 'company_name', 'sender_name', 'interview_date', 'interview_time', 'interview_type', 'interview_duration', 'interview_location', 'careers_url'],
     'crm' => ['contact_name', 'contact_first_name', 'contact_company', 'service', 'company_name', 'sender_name'],
+    'hr' => ['employee_name', 'employee_first_name', 'period', 'basic', 'allowances', 'deductions', 'net', 'pay_date', 'company_name'],
 ];
 
 function candidate_vars(array $app): array
@@ -232,25 +235,57 @@ function candidate_name(array $row): string
 }
 
 /** Move an application to a stage, recording why. Returns the new stage or null if unchanged. */
-function application_move(int $appId, int $stageId, string $reason = ''): ?array
+/**
+ * Move an application to a stage. Talent-pool moves take $extra['note'] and
+ * $extra['revisit_on'] (Y-m-d); a revisit date becomes a follow-up task.
+ */
+function application_move(int $appId, int $stageId, string $reason = '', array $extra = []): ?array
 {
     $stages = ats_stages();
-    $app = db()->one('SELECT id, stage_id FROM applications WHERE id = ?', [$appId]);
+    $app = db()->one('SELECT a.id, a.stage_id, a.owner_id, c.first_name, c.last_name, j.title AS job_title FROM applications a
+        JOIN candidates c ON c.id = a.candidate_id JOIN jobs j ON j.id = a.job_id WHERE a.id = ?', [$appId]);
     if (!$app || !isset($stages[$stageId]) || (int) $app['stage_id'] === $stageId) {
         return null;
     }
     $to = $stages[$stageId];
     $from = $stages[(int) $app['stage_id']] ?? null;
-    $status = $to['kind'] === 'hired' ? 'hired' : ($to['kind'] === 'rejected' ? 'rejected' : 'active');
+    $status = match ($to['kind']) {
+        'hired' => 'hired',
+        'rejected' => 'rejected',
+        'pool' => 'pool',
+        default => 'active',
+    };
+    $reason = mb_substr(trim($reason), 0, 120);
+    $revisit = isset($extra['revisit_on']) ? parse_dt((string) $extra['revisit_on'], false) : null;
+    $note = trim((string) ($extra['note'] ?? ''));
     $data = ['stage_id' => $stageId, 'status' => $status, 'stage_changed_at' => now(), 'updated_at' => now()];
     $data['hired_at'] = $status === 'hired' ? now() : null;
     $data['rejected_at'] = $status === 'rejected' ? now() : null;
-    $data['rejection_reason'] = $status === 'rejected' ? mb_substr($reason, 0, 120) : null;
+    $data['rejection_reason'] = $status === 'rejected' ? $reason : null;
+    $data['pooled_at'] = $status === 'pool' ? now() : null;
+    $data['pool_reason'] = $status === 'pool' ? ($reason !== '' ? $reason : null) : null;
+    $data['pool_note'] = $status === 'pool' && $note !== '' ? $note : null;
+    $data['revisit_on'] = $status === 'pool' ? $revisit : null;
     db()->update('applications', $data, 'id = ?', [$appId]);
-    $title = 'Moved to ' . $to['name'];
-    log_activity('application', $appId, 'stage', $title, $status === 'rejected' && $reason !== '' ? 'Reason: ' . $reason : '', [
+    $body = '';
+    if (in_array($status, ['rejected', 'pool'], true) && $reason !== '') {
+        $body = 'Reason: ' . $reason;
+    }
+    if ($status === 'pool') {
+        $body = trim($body . ($revisit ? "\nRevisit on " . fmt_date($revisit) : '') . ($note !== '' ? "\n" . $note : ''));
+    }
+    log_activity('application', $appId, 'stage', 'Moved to ' . $to['name'], $body, [
         'from' => $from['name'] ?? null, 'to' => $to['name'],
     ]);
+    if ($status === 'pool' && $revisit) {
+        db()->insert('tasks', [
+            'title' => mb_substr('Revisit ' . trim($app['first_name'] . ' ' . $app['last_name']) . ' for ' . $app['job_title'], 0, 190),
+            'notes' => $reason !== '' ? 'Kept in the talent pool: ' . $reason : null,
+            'entity_type' => 'application', 'entity_id' => $appId,
+            'assigned_to' => $app['owner_id'] ?: auth_id(), 'due_at' => $revisit . ' 10:00:00',
+            'created_by' => auth_id(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
     return $to;
 }
 

@@ -34,7 +34,7 @@ function notifications_read_all(): void
 }
 
 /* ------------------------------------------------------------------ activity log */
-const ACTIVITY_ENTITIES = ['application' => 'Applications', 'candidate' => 'Candidates', 'lead' => 'Leads', 'contact' => 'Contacts', 'user' => 'Team'];
+const ACTIVITY_ENTITIES = ['application' => 'Applications', 'candidate' => 'Candidates', 'lead' => 'Leads', 'contact' => 'Contacts', 'employee' => 'Employees', 'payroll' => 'Payroll', 'user' => 'Team'];
 
 function activity_link(array $a): ?string
 {
@@ -45,6 +45,8 @@ function activity_link(array $a): ?string
         'lead' => admin_url('leads/' . $id),
         'contact' => admin_url('contacts/' . $id),
         'user' => admin_url('team/' . $id),
+        'employee' => admin_url('employees/' . $id),
+        'payroll' => admin_url('payroll/' . $id),
         default => null,
     };
 }
@@ -72,6 +74,12 @@ function activity_subjects(array $rows): array
     }
     if (!empty($ids['contact'])) {
         $names['contact'] = db()->pairs('SELECT id, name FROM contacts WHERE id IN (' . in_list($ids['contact']) . ')', $ids['contact']);
+    }
+    if (!empty($ids['employee'])) {
+        $names['employee'] = db()->pairs("SELECT id, CONCAT(first_name, ' ', last_name) FROM employees WHERE id IN (" . in_list($ids['employee']) . ')', $ids['employee']);
+    }
+    if (!empty($ids['payroll'])) {
+        $names['payroll'] = db()->pairs('SELECT id, title FROM payroll_runs WHERE id IN (' . in_list($ids['payroll']) . ')', $ids['payroll']);
     }
     if (!empty($ids['user'])) {
         $names['user'] = db()->pairs('SELECT id, name FROM users WHERE id IN (' . in_list($ids['user']) . ')', $ids['user']);

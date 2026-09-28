@@ -27,6 +27,14 @@ $hasPw = $s('smtp_password') !== '';
     </fieldset>
 
     <fieldset class="fieldset">
+      <legend>People and payroll</legend>
+      <div class="grid-2">
+        <?= fi('employee_code_prefix', 'Employee code prefix', $s('employee_code_prefix', 'AL-'), ['help' => 'New employees get codes like AL-0001.']) ?>
+        <?= fi('probation_months', 'Probation for new hires (months)', $s('probation_months', '3'), ['type' => 'number', 'attrs' => ['min' => 0, 'max' => 12], 'help' => 'Used when you convert a hire to an employee. 0 for none.']) ?>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
       <legend>Who gets notified</legend>
       <div class="grid-2">
         <?= fi('hr_email', 'New applications go to', $s('hr_email'), ['help' => 'Separate several addresses with commas. The hiring manager on a job is added automatically.']) ?>

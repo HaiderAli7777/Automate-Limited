@@ -58,6 +58,7 @@ function admin_routes(): array
         ['POST', 'candidates/(\d+)/delete', 'candidates_delete', [$editAts, 'data.delete']],
 
         ['GET', 'pipeline', 'pipeline_board', $viewAts],
+        ['GET', 'talent-pool', 'talent_pool', $viewAts],
         ['POST', 'applications/bulk', 'applications_bulk', $editAts],
         ['GET', 'applications/(\d+)', 'applications_show', 'interviews'],
         ['POST', 'applications/(\d+)/stage', 'applications_stage', $editAts],
@@ -98,14 +99,49 @@ function admin_routes(): array
         ['POST', 'contacts/(\d+)', 'contacts_save', $editCrm],
         ['POST', 'contacts/(\d+)/delete', 'contacts_delete', [$editCrm, 'data.delete']],
 
+        ['GET', 'dashboard/hr', 'dashboard_hr', 'hr.view'],
+        ['GET', 'employees', 'employees_index', 'hr.view'],
+        ['GET', 'employees/export', 'employees_export', ['hr.view', 'data.export']],
+        ['GET', 'employees/new', 'employees_form', 'hr.manage'],
+        ['POST', 'employees/new', 'employees_save', 'hr.manage'],
+        ['GET', 'employees/(\d+)', 'employees_show', 'hr.view'],
+        ['GET', 'employees/(\d+)/edit', 'employees_form', 'hr.manage'],
+        ['POST', 'employees/(\d+)/edit', 'employees_save', 'hr.manage'],
+        ['POST', 'employees/(\d+)/status', 'employees_status', 'hr.manage'],
+        ['POST', 'employees/(\d+)/components', 'employees_components', 'payroll.manage'],
+        ['POST', 'employees/(\d+)/note', 'employees_note', 'hr.manage'],
+        ['POST', 'employees/(\d+)/files', 'employees_upload', 'hr.manage'],
+        ['POST', 'employees/(\d+)/delete', 'employees_delete', ['hr.manage', 'data.delete']],
+        ['GET', 'departments', 'departments_index', 'hr.view'],
+        ['POST', 'departments', 'departments_save', 'hr.manage'],
+        ['POST', 'departments/(\d+)', 'departments_save', 'hr.manage'],
+        ['POST', 'departments/(\d+)/delete', 'departments_delete', 'hr.manage'],
+
+        ['GET', 'payroll', 'payroll_index', 'payroll.manage'],
+        ['GET', 'payroll/new', 'payroll_form', 'payroll.manage'],
+        ['POST', 'payroll/new', 'payroll_create', 'payroll.manage'],
+        ['GET', 'payroll/(\d+)', 'payroll_show', 'payroll.manage'],
+        ['POST', 'payroll/(\d+)/confirm', 'payroll_confirm', 'payroll.manage'],
+        ['POST', 'payroll/(\d+)/paid', 'payroll_paid', 'payroll.manage'],
+        ['POST', 'payroll/(\d+)/delete', 'payroll_delete', 'payroll.manage'],
+        ['GET', 'payroll/(\d+)/export', 'payroll_export', 'payroll.manage'],
+        ['GET', 'payroll/(\d+)/print', 'payroll_print', 'payroll.manage'],
+        ['POST', 'payroll/(\d+)/email', 'payroll_email', 'payroll.manage'],
+        ['GET', 'payslips/(\d+)', 'payslip_show', 'payroll.manage'],
+        ['POST', 'payslips/(\d+)', 'payslip_save', 'payroll.manage'],
+        ['POST', 'payslips/(\d+)/confirm', 'payslip_confirm', 'payroll.manage'],
+        ['POST', 'payslips/(\d+)/reopen', 'payslip_reopen', 'payroll.manage'],
+        ['POST', 'payslips/(\d+)/refresh', 'payslip_refresh', 'payroll.manage'],
+        ['GET', 'payslips/(\d+)/print', 'payslip_print', 'payroll.manage'],
+
         ['GET', 'tasks', 'tasks_index', 'user'],
         ['POST', 'tasks/new', 'tasks_create', 'user'],
         ['POST', 'tasks/(\d+)/toggle', 'tasks_toggle', 'user'],
         ['POST', 'tasks/(\d+)/delete', 'tasks_delete', 'user'],
 
         ['POST', 'activities/(\d+)/delete', 'activities_delete', 'user'],
-        ['GET', 'files/(\d+)', 'files_download', 'interviews'],
-        ['POST', 'files/(\d+)/delete', 'files_delete', $editAts],
+        ['GET', 'files/(\d+)', 'files_download', 'user'],
+        ['POST', 'files/(\d+)/delete', 'files_delete', 'user'],
 
         ['GET', 'team', 'team_index', 'team'],
         ['GET', 'team/new', 'team_form', 'team'],
@@ -207,6 +243,9 @@ function nav_counts(): array
         'tasks' => (int) db()->value('SELECT COUNT(*) FROM tasks WHERE assigned_to = ? AND completed_at IS NULL AND due_at IS NOT NULL AND due_at <= ?', [$uid, date('Y-m-d 23:59:59')]),
         'overdue' => (int) db()->value('SELECT COUNT(*) FROM tasks WHERE assigned_to = ? AND completed_at IS NULL AND due_at IS NOT NULL AND due_at < ?', [$uid, now()]),
         'new_apps' => 0,
+        'pool_due' => 0,
+        'probation_due' => 0,
+        'draft_slips' => 0,
         'new_leads' => 0,
         'my_interviews' => 0,
         'notifications' => (int) db()->value('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL', [$uid]),
@@ -214,6 +253,13 @@ function nav_counts(): array
     if (user_can('ats')) {
         $first = first_stage_id(ats_stages(), 'active');
         $c['new_apps'] = $first ? (int) db()->value("SELECT COUNT(*) FROM applications WHERE stage_id = ? AND status = 'active'", [$first]) : 0;
+        $c['pool_due'] = (int) db()->value("SELECT COUNT(*) FROM applications WHERE status = 'pool' AND revisit_on IS NOT NULL AND revisit_on <= ?", [today()]);
+    }
+    if (user_can('hr.view')) {
+        $c['probation_due'] = (int) db()->value("SELECT COUNT(*) FROM employees WHERE status = 'probation' AND probation_end IS NOT NULL AND probation_end <= ?", [today()]);
+    }
+    if (user_can('payroll.manage')) {
+        $c['draft_slips'] = (int) db()->value("SELECT COUNT(*) FROM payslips WHERE status = 'draft'");
     }
     if (user_can('crm')) {
         $first = first_stage_id(lead_stages(), 'open');

@@ -135,8 +135,10 @@ function activities_delete(int $id): void
 function files_download(int $id): void
 {
     $file = db()->one('SELECT * FROM files WHERE id = ?', [$id]) ?? abort(404);
-    // interviewers can open CVs only for candidates they are interviewing
-    if (!user_can('ats')) {
+    if ($file['entity_type'] === 'employee') {
+        require_can('hr.view');
+    } elseif (!user_can('ats')) {
+        // interviewers can open CVs only for candidates they are interviewing
         $allowed = false;
         if ($file['entity_type'] === 'candidate') {
             foreach (db()->column('SELECT id FROM applications WHERE candidate_id = ?', [(int) $file['entity_id']]) as $appId) {
@@ -167,6 +169,7 @@ function files_download(int $id): void
 function files_delete(int $id): void
 {
     $file = db()->one('SELECT * FROM files WHERE id = ?', [$id]) ?? abort(404);
+    require_can($file['entity_type'] === 'employee' ? 'hr.manage' : 'ats.manage');
     db()->run('UPDATE applications SET resume_file_id = NULL WHERE resume_file_id = ?', [$id]);
     delete_file_record($file);
     log_activity((string) $file['entity_type'], (int) $file['entity_id'], 'file', 'File removed: ' . $file['original_name']);
@@ -178,7 +181,7 @@ function files_delete(int $id): void
 function search_page(): void
 {
     $q = input('q');
-    $results = ['candidates' => [], 'leads' => [], 'contacts' => [], 'jobs' => []];
+    $results = ['employees' => [], 'candidates' => [], 'leads' => [], 'contacts' => [], 'jobs' => []];
     if (mb_strlen($q) >= 2) {
         $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
         if (user_can('ats')) {
@@ -189,6 +192,14 @@ function search_page(): void
                 [$like, $like, $like, $like, $like]
             );
             $results['jobs'] = db()->all('SELECT * FROM jobs WHERE title LIKE ? OR department LIKE ? OR location LIKE ? ORDER BY updated_at DESC LIMIT 10', [$like, $like, $like]);
+        }
+        if (user_can('hr.view')) {
+            $results['employees'] = db()->all(
+                "SELECT e.*, d.name AS department_name FROM employees e LEFT JOIN departments d ON d.id = e.department_id
+                 WHERE CONCAT(e.first_name, ' ', e.last_name) LIKE ? OR e.email LIKE ? OR e.phone LIKE ? OR e.employee_code LIKE ? OR e.cnic LIKE ? OR e.designation LIKE ?
+                 ORDER BY e.status = 'left', e.first_name LIMIT 25",
+                [$like, $like, $like, $like, $like, $like]
+            );
         }
         if (user_can('crm')) {
             $results['leads'] = db()->all(

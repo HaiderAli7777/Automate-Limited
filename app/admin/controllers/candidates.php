@@ -22,10 +22,10 @@ function candidate_query(): array
         $params[] = $stage;
     }
     $status = input('status');
-    if (in_array($status, ['active', 'hired', 'rejected'], true)) {
+    if (in_array($status, ['active', 'hired', 'rejected', 'pool'], true)) {
         $where[] = 'a.status = ?';
         $params[] = $status;
-    } elseif ($status === 'pool') {
+    } elseif ($status === 'none') {
         $where[] = 'a.id IS NULL';
     }
     if (($source = input('source')) !== '' && isset(CANDIDATE_SOURCES[$source])) {
@@ -58,14 +58,14 @@ function candidates_index(): void
 function candidates_export(): void
 {
     [$from, $params] = candidate_query();
-    $rows = db()->all('SELECT c.*, a.stage_id, a.status AS app_status, a.applied_at, a.source AS app_source, a.rejection_reason, j.title AS job_title' . $from . ' ORDER BY COALESCE(a.applied_at, c.created_at) DESC', $params);
+    $rows = db()->all('SELECT c.*, a.stage_id, a.status AS app_status, a.applied_at, a.source AS app_source, COALESCE(a.rejection_reason, a.pool_reason) AS rejection_reason, j.title AS job_title' . $from . ' ORDER BY COALESCE(a.applied_at, c.created_at) DESC', $params);
     $stages = ats_stages();
     csv_download('candidates-' . date('Y-m-d') . '.csv',
-        ['First name', 'Last name', 'Email', 'Phone', 'Location', 'Current title', 'Current company', 'Years of experience', 'Expected salary', 'Notice period', 'LinkedIn', 'Portfolio', 'Tags', 'Job', 'Stage', 'Status', 'Rejection reason', 'Source', 'Applied'],
+        ['First name', 'Last name', 'Email', 'Phone', 'Location', 'Current title', 'Current company', 'Years of experience', 'Expected salary', 'Notice period', 'LinkedIn', 'Portfolio', 'Tags', 'Job', 'Stage', 'Status', 'Reason (rejected or pooled)', 'Source', 'Applied'],
         array_map(static fn ($r) => [
             $r['first_name'], $r['last_name'], $r['email'], $r['phone'], $r['location'], $r['current_title'], $r['current_company'], $r['experience_years'],
             $r['expected_salary'], $r['notice_period'], $r['linkedin_url'], $r['portfolio_url'], $r['tags'], $r['job_title'],
-            $stages[(int) $r['stage_id']]['name'] ?? '', $r['app_status'] ?? 'talent pool', $r['rejection_reason'],
+            $stages[(int) $r['stage_id']]['name'] ?? '', $r['app_status'] ?? 'no job', $r['rejection_reason'],
             CANDIDATE_SOURCES[$r['app_source'] ?? $r['source'] ?? ''] ?? ($r['app_source'] ?? $r['source']), $r['applied_at'],
         ], $rows)
     );

@@ -44,12 +44,13 @@ function applications_stage(int $id): void
     $app = application_full($id) ?? abort(404);
     $stageId = input_int('stage_id');
     $reason = mb_substr(input('reason'), 0, 120);
-    $to = application_move($id, $stageId, $reason);
+    $to = application_move($id, $stageId, $reason, ['revisit_on' => input('revisit_on'), 'note' => (string) ($_POST['note'] ?? '')]);
     $message = '';
     if ($to) {
         $message = candidate_name($app) . ' moved to ' . $to['name'] . '.';
-        if ($to['kind'] === 'rejected' && input('notify') === '1') {
-            [$ok, $subject, $body] = send_template('application_rejected', (string) $app['email'], candidate_vars($app), [
+        $tpl = ['rejected' => 'application_rejected', 'pool' => 'application_on_hold'][$to['kind']] ?? null;
+        if ($tpl && input('notify') === '1') {
+            [$ok, $subject, $body] = send_template($tpl, (string) $app['email'], candidate_vars($app), [
                 'to_name' => candidate_name($app),
                 'reply_to' => (string) auth_user()['email'],
             ]);
@@ -179,14 +180,15 @@ function applications_bulk(): void
     $reason = input('reason');
     $done = 0;
     $emailed = 0;
+    $tpl = ['rejected' => 'application_rejected', 'pool' => 'application_on_hold'][$stage['kind']] ?? null;
     foreach ($ids as $id) {
         $app = application_full($id);
-        if (!$app || !application_move($id, $stageId, $reason)) {
+        if (!$app || !application_move($id, $stageId, $reason, ['revisit_on' => input('revisit_on')])) {
             continue;
         }
         $done++;
-        if ($stage['kind'] === 'rejected' && input('notify') === '1') {
-            [$ok, $subject, $body] = send_template('application_rejected', (string) $app['email'], candidate_vars($app), ['to_name' => candidate_name($app), 'reply_to' => (string) auth_user()['email']]);
+        if ($tpl && input('notify') === '1') {
+            [$ok, $subject, $body] = send_template($tpl, (string) $app['email'], candidate_vars($app), ['to_name' => candidate_name($app), 'reply_to' => (string) auth_user()['email']]);
             if ($ok) {
                 log_activity('application', $id, 'email', 'Email sent: ' . $subject, $body);
                 $emailed++;
@@ -213,8 +215,8 @@ function pipeline_board(): void
         $where[] = "(CONCAT(c.first_name, ' ', c.last_name) LIKE ? OR c.email LIKE ?)";
         array_push($params, "%$q%", "%$q%");
     }
-    // finished applications only stay on the board for 30 days
-    $where[] = "(a.status = 'active' OR a.stage_changed_at >= ?)";
+    // finished applications only stay on the board for 30 days; the talent pool stays
+    $where[] = "(a.status IN ('active', 'pool') OR a.stage_changed_at >= ?)";
     $params[] = date('Y-m-d H:i:s', time() - 30 * 86400);
     $apps = db()->all(
         "SELECT a.*, c.first_name, c.last_name, c.email, c.current_title, j.title AS job_title,
@@ -225,4 +227,37 @@ function pipeline_board(): void
         $params
     );
     admin_view('applications/pipeline', ['title' => 'Hiring pipeline', 'nav' => 'pipeline', 'apps' => $apps, 'jobs' => $jobs, 'jobId' => $jobId, 'q' => $q, 'wide' => true]);
+}
+
+/* ------------------------------------------------------------------ talent pool */
+function talent_pool(): void
+{
+    $where = ["a.status = 'pool'"];
+    $params = [];
+    if ($jobId = input_int('job')) {
+        $where[] = 'a.job_id = ?';
+        $params[] = $jobId;
+    }
+    if (in_array(input('reason'), POOL_REASONS, true)) {
+        $where[] = 'a.pool_reason = ?';
+        $params[] = input('reason');
+    }
+    if (input('due') === '1') {
+        $where[] = 'a.revisit_on IS NOT NULL AND a.revisit_on <= ?';
+        $params[] = today();
+    }
+    if (($q = input('q')) !== '') {
+        $where[] = "(CONCAT(c.first_name, ' ', c.last_name) LIKE ? OR c.email LIKE ? OR c.current_title LIKE ?)";
+        array_push($params, "%$q%", "%$q%", "%$q%");
+    }
+    $rows = db()->all(
+        'SELECT a.*, c.first_name, c.last_name, c.email, c.current_title, c.current_company, c.experience_years, c.expected_salary, c.location, j.title AS job_title, j.status AS job_status,
+            (SELECT AVG(f.rating) FROM interview_feedback f JOIN interviews i ON i.id = f.interview_id WHERE i.application_id = a.id) AS avg_rating
+         FROM applications a JOIN candidates c ON c.id = a.candidate_id JOIN jobs j ON j.id = a.job_id
+         WHERE ' . implode(' AND ', $where) . ' ORDER BY a.revisit_on IS NULL, a.revisit_on, a.pooled_at DESC LIMIT 500',
+        $params
+    );
+    $jobs = db()->all("SELECT j.id, j.title, COUNT(a.id) AS n FROM jobs j JOIN applications a ON a.job_id = j.id AND a.status = 'pool' GROUP BY j.id, j.title ORDER BY j.title");
+    $due = (int) db()->value("SELECT COUNT(*) FROM applications WHERE status = 'pool' AND revisit_on IS NOT NULL AND revisit_on <= ?", [today()]);
+    admin_view('applications/pool', ['title' => 'Talent pool', 'nav' => 'pool', 'rows' => $rows, 'jobs' => $jobs, 'due' => $due]);
 }

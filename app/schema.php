@@ -339,6 +339,142 @@ function schema_migrations(): array
                 KEY idx_notif_user (user_id, read_at, created_at)
             )' . SQL_TABLE_OPTS,
         ],
+
+        // 3: talent pool, employees and departments, payroll
+        3 => [
+            'ALTER TABLE applications
+                ADD COLUMN pool_reason VARCHAR(120) NULL AFTER rejection_reason,
+                ADD COLUMN pool_note TEXT NULL AFTER pool_reason,
+                ADD COLUMN revisit_on DATE NULL AFTER pool_note,
+                ADD COLUMN pooled_at DATETIME NULL AFTER rejected_at',
+            static function (Db $db): void {
+                // existing sites get the new stage; new installs get it from seed_defaults()
+                if ((int) $db->value('SELECT COUNT(*) FROM ats_stages') && !$db->value("SELECT id FROM ats_stages WHERE kind = 'pool'")) {
+                    $db->insert('ats_stages', ['name' => 'Talent pool', 'color' => 'violet', 'kind' => 'pool', 'sort_order' => 75]);
+                }
+                foreach (['application_on_hold', 'payslip'] as $tkey) {
+                    if ((int) $db->value('SELECT COUNT(*) FROM email_templates') && !$db->value('SELECT id FROM email_templates WHERE tkey = ?', [$tkey])) {
+                        [$key, $name, $module, $subject, $body] = default_templates()[$tkey];
+                        $db->insert('email_templates', ['tkey' => $key, 'name' => $name, 'module' => $module, 'subject' => $subject, 'body' => $body, 'updated_at' => date('Y-m-d H:i:s')]);
+                    }
+                }
+            },
+            'CREATE TABLE IF NOT EXISTS departments (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(80) NOT NULL,
+                head_employee_id INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uq_dept_name (name)
+            )' . SQL_TABLE_OPTS,
+            'CREATE TABLE IF NOT EXISTS employees (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                employee_code VARCHAR(20) NOT NULL,
+                candidate_id INT UNSIGNED NULL,
+                application_id INT UNSIGNED NULL,
+                first_name VARCHAR(80) NOT NULL,
+                last_name VARCHAR(80) NOT NULL DEFAULT \'\',
+                email VARCHAR(190) NULL,
+                phone VARCHAR(40) NULL,
+                cnic VARCHAR(30) NULL,
+                date_of_birth DATE NULL,
+                gender VARCHAR(12) NULL,
+                marital_status VARCHAR(20) NULL,
+                address TEXT NULL,
+                city VARCHAR(80) NULL,
+                emergency_name VARCHAR(120) NULL,
+                emergency_relation VARCHAR(60) NULL,
+                emergency_phone VARCHAR(40) NULL,
+                department_id INT UNSIGNED NULL,
+                designation VARCHAR(120) NULL,
+                employment_type VARCHAR(20) NOT NULL DEFAULT \'full_time\',
+                work_location VARCHAR(120) NULL,
+                manager_id INT UNSIGNED NULL,
+                join_date DATE NOT NULL,
+                probation_end DATE NULL,
+                confirmed_on DATE NULL,
+                status VARCHAR(20) NOT NULL DEFAULT \'active\',
+                exit_date DATE NULL,
+                exit_reason VARCHAR(160) NULL,
+                basic_salary DECIMAL(14,2) NOT NULL DEFAULT 0,
+                currency VARCHAR(8) NOT NULL DEFAULT \'PKR\',
+                bank_name VARCHAR(120) NULL,
+                bank_account_title VARCHAR(120) NULL,
+                bank_iban VARCHAR(60) NULL,
+                tax_number VARCHAR(40) NULL,
+                notes TEXT NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uq_emp_code (employee_code),
+                KEY idx_emp_status (status),
+                KEY idx_emp_dept (department_id),
+                KEY idx_emp_app (application_id)
+            )' . SQL_TABLE_OPTS,
+            'CREATE TABLE IF NOT EXISTS employee_components (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                employee_id INT UNSIGNED NOT NULL,
+                type VARCHAR(12) NOT NULL,
+                label VARCHAR(80) NOT NULL,
+                amount DECIMAL(14,2) NOT NULL,
+                KEY idx_comp_emp (employee_id),
+                CONSTRAINT fk_comp_emp FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+            )' . SQL_TABLE_OPTS,
+            'CREATE TABLE IF NOT EXISTS payroll_runs (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                period CHAR(7) NOT NULL,
+                title VARCHAR(160) NOT NULL,
+                scope VARCHAR(20) NOT NULL DEFAULT \'all\',
+                department_id INT UNSIGNED NULL,
+                employee_id INT UNSIGNED NULL,
+                pay_date DATE NULL,
+                status VARCHAR(20) NOT NULL DEFAULT \'draft\',
+                notes TEXT NULL,
+                created_by INT UNSIGNED NULL,
+                confirmed_by INT UNSIGNED NULL,
+                confirmed_at DATETIME NULL,
+                paid_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                KEY idx_run_period (period)
+            )' . SQL_TABLE_OPTS,
+            'CREATE TABLE IF NOT EXISTS payslips (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                run_id INT UNSIGNED NOT NULL,
+                employee_id INT UNSIGNED NOT NULL,
+                period CHAR(7) NOT NULL,
+                emp_name VARCHAR(170) NOT NULL,
+                emp_code VARCHAR(20) NOT NULL,
+                designation VARCHAR(120) NULL,
+                department VARCHAR(80) NULL,
+                bank_iban VARCHAR(60) NULL,
+                currency VARCHAR(8) NOT NULL,
+                basic DECIMAL(14,2) NOT NULL DEFAULT 0,
+                allowances DECIMAL(14,2) NOT NULL DEFAULT 0,
+                deductions DECIMAL(14,2) NOT NULL DEFAULT 0,
+                gross DECIMAL(14,2) NOT NULL DEFAULT 0,
+                net DECIMAL(14,2) NOT NULL DEFAULT 0,
+                status VARCHAR(20) NOT NULL DEFAULT \'draft\',
+                notes TEXT NULL,
+                confirmed_at DATETIME NULL,
+                emailed_at DATETIME NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uq_slip_emp_period (employee_id, period),
+                KEY idx_slip_run (run_id),
+                CONSTRAINT fk_slip_run FOREIGN KEY (run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE
+            )' . SQL_TABLE_OPTS,
+            'CREATE TABLE IF NOT EXISTS payslip_lines (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                payslip_id INT UNSIGNED NOT NULL,
+                type VARCHAR(12) NOT NULL,
+                label VARCHAR(80) NOT NULL,
+                amount DECIMAL(14,2) NOT NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                KEY idx_line_slip (payslip_id),
+                CONSTRAINT fk_line_slip FOREIGN KEY (payslip_id) REFERENCES payslips(id) ON DELETE CASCADE
+            )' . SQL_TABLE_OPTS,
+        ],
     ];
 }
 
@@ -361,7 +497,11 @@ function migrate(Db $db): void
             continue;
         }
         foreach ($statements as $sql) {
-            $db->pdo()->exec($sql);
+            if ($sql instanceof Closure) {
+                $sql($db);
+            } else {
+                $db->pdo()->exec($sql);
+            }
         }
         $db->run("INSERT INTO settings (skey, svalue) VALUES ('schema_version', ?) ON DUPLICATE KEY UPDATE svalue = VALUES(svalue)", [(string) $version]);
     }
@@ -376,7 +516,7 @@ function seed_defaults(Db $db, array $opts): void
         $stages = [
             ['Applied', 'slate', 'active'], ['Screening', 'blue', 'active'], ['Assessment', 'violet', 'active'],
             ['Interview', 'cyan', 'active'], ['Final interview', 'teal', 'active'], ['Offer', 'amber', 'active'],
-            ['Hired', 'green', 'hired'], ['Rejected', 'red', 'rejected'],
+            ['Hired', 'green', 'hired'], ['Talent pool', 'violet', 'pool'], ['Rejected', 'red', 'rejected'],
         ];
         foreach ($stages as $i => [$name, $color, $kind]) {
             $db->insert('ats_stages', ['name' => $name, 'color' => $color, 'kind' => $kind, 'sort_order' => ($i + 1) * 10]);
@@ -394,26 +534,7 @@ function seed_defaults(Db $db, array $opts): void
         }
     }
 
-    $templates = [
-        ['application_received', 'Application received', 'ats', 'We received your application for {{job_title}}',
-            "Hi {{candidate_first_name}},\n\nThank you for applying for the {{job_title}} role at {{company_name}}. Your application has reached our hiring team.\n\nWe read every application. If your experience matches what the role needs, we'll contact you about next steps.\n\nKind regards,\n{{company_name}}"],
-        ['interview_invite', 'Interview invitation', 'ats', 'Interview for {{job_title}}: {{interview_date}}',
-            "Hi {{candidate_first_name}},\n\nWe'd like to invite you to an interview for the {{job_title}} role.\n\nWhen: {{interview_date}} at {{interview_time}}\nLength: {{interview_duration}}\nFormat: {{interview_type}}\nWhere: {{interview_location}}\n\nA calendar invitation is attached. If the time doesn't work, reply to this email and we'll find another.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['interview_update', 'Interview changed', 'ats', 'Updated interview details for {{job_title}}',
-            "Hi {{candidate_first_name}},\n\nThe details of your interview for the {{job_title}} role have changed.\n\nWhen: {{interview_date}} at {{interview_time}}\nLength: {{interview_duration}}\nFormat: {{interview_type}}\nWhere: {{interview_location}}\n\nAn updated calendar invitation is attached.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['application_rejected', 'Not moving forward', 'ats', 'Your application for {{job_title}}',
-            "Hi {{candidate_first_name}},\n\nThank you for your interest in the {{job_title}} role and for the time you put into your application.\n\nAfter careful consideration, we won't be moving forward with your application for this role. We'll keep your details on file, and you're welcome to apply for future openings at {{careers_url}}.\n\nWe wish you the best in your search.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['offer', 'Offer', 'ats', 'An offer for the {{job_title}} role',
-            "Hi {{candidate_first_name}},\n\nWe're pleased to offer you the {{job_title}} role at {{company_name}}.\n\nThe full offer letter follows separately. Reply to this email if you have any questions.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['candidate_blank', 'Blank email to candidate', 'ats', '{{job_title}} at {{company_name}}',
-            "Hi {{candidate_first_name}},\n\n\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['inquiry_received', 'Enquiry received', 'crm', 'Thanks for getting in touch with {{company_name}}',
-            "Hi {{contact_first_name}},\n\nThanks for your message. It has reached our team and someone will reply personally.\n\nIf you have anything to add, such as documents, screenshots or the version of Odoo you're on, just reply to this email.\n\nKind regards,\n{{company_name}}"],
-        ['lead_follow_up', 'Follow-up', 'crm', 'Following up on your enquiry',
-            "Hi {{contact_first_name}},\n\nI'm following up on your enquiry about {{service}}. Would a short call this week be useful to go through what you need?\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-        ['lead_blank', 'Blank email to contact', 'crm', 'Your enquiry with {{company_name}}',
-            "Hi {{contact_first_name}},\n\n\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
-    ];
+    $templates = default_templates();
     foreach ($templates as [$key, $name, $module, $subject, $body]) {
         if (!$db->value('SELECT id FROM email_templates WHERE tkey = ?', [$key])) {
             $db->insert('email_templates', ['tkey' => $key, 'name' => $name, 'module' => $module, 'subject' => $subject, 'body' => $body, 'updated_at' => $now]);
@@ -464,4 +585,33 @@ function seed_defaults(Db $db, array $opts): void
             'updated_at' => $now,
         ]);
     }
+}
+
+/** Built-in email templates, keyed by tkey. */
+function default_templates(): array
+{
+    return [
+        'application_received' => ['application_received', 'Application received', 'ats', 'We received your application for {{job_title}}',
+            "Hi {{candidate_first_name}},\n\nThank you for applying for the {{job_title}} role at {{company_name}}. Your application has reached our hiring team.\n\nWe read every application. If your experience matches what the role needs, we'll contact you about next steps.\n\nKind regards,\n{{company_name}}"],
+        'interview_invite' => ['interview_invite', 'Interview invitation', 'ats', 'Interview for {{job_title}}: {{interview_date}}',
+            "Hi {{candidate_first_name}},\n\nWe'd like to invite you to an interview for the {{job_title}} role.\n\nWhen: {{interview_date}} at {{interview_time}}\nLength: {{interview_duration}}\nFormat: {{interview_type}}\nWhere: {{interview_location}}\n\nA calendar invitation is attached. If the time doesn't work, reply to this email and we'll find another.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'interview_update' => ['interview_update', 'Interview changed', 'ats', 'Updated interview details for {{job_title}}',
+            "Hi {{candidate_first_name}},\n\nThe details of your interview for the {{job_title}} role have changed.\n\nWhen: {{interview_date}} at {{interview_time}}\nLength: {{interview_duration}}\nFormat: {{interview_type}}\nWhere: {{interview_location}}\n\nAn updated calendar invitation is attached.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'application_rejected' => ['application_rejected', 'Not moving forward', 'ats', 'Your application for {{job_title}}',
+            "Hi {{candidate_first_name}},\n\nThank you for your interest in the {{job_title}} role and for the time you put into your application.\n\nAfter careful consideration, we won't be moving forward with your application for this role. We'll keep your details on file, and you're welcome to apply for future openings at {{careers_url}}.\n\nWe wish you the best in your search.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'offer' => ['offer', 'Offer', 'ats', 'An offer for the {{job_title}} role',
+            "Hi {{candidate_first_name}},\n\nWe're pleased to offer you the {{job_title}} role at {{company_name}}.\n\nThe full offer letter follows separately. Reply to this email if you have any questions.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'candidate_blank' => ['candidate_blank', 'Blank email to candidate', 'ats', '{{job_title}} at {{company_name}}',
+            "Hi {{candidate_first_name}},\n\n\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'inquiry_received' => ['inquiry_received', 'Enquiry received', 'crm', 'Thanks for getting in touch with {{company_name}}',
+            "Hi {{contact_first_name}},\n\nThanks for your message. It has reached our team and someone will reply personally.\n\nIf you have anything to add, such as documents, screenshots or the version of Odoo you're on, just reply to this email.\n\nKind regards,\n{{company_name}}"],
+        'lead_follow_up' => ['lead_follow_up', 'Follow-up', 'crm', 'Following up on your enquiry',
+            "Hi {{contact_first_name}},\n\nI'm following up on your enquiry about {{service}}. Would a short call this week be useful to go through what you need?\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'lead_blank' => ['lead_blank', 'Blank email to contact', 'crm', 'Your enquiry with {{company_name}}',
+            "Hi {{contact_first_name}},\n\n\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'application_on_hold' => ['application_on_hold', 'Keeping you in mind', 'ats', 'Your application for {{job_title}}',
+            "Hi {{candidate_first_name}},\n\nThank you for your time on the {{job_title}} role. We were impressed, but we can't move forward right now.\n\nWe'd like to keep your details on file and get in touch when a role that fits comes up, rather than close your application. If you'd prefer we didn't, just reply and let us know.\n\nKind regards,\n{{sender_name}}\n{{company_name}}"],
+        'payslip' => ['payslip', 'Payslip', 'hr', 'Your payslip for {{period}}',
+            "Hi {{employee_first_name}},\n\nYour payslip for {{period}} is below.\n\nBasic salary: {{basic}}\nAllowances: {{allowances}}\nDeductions: {{deductions}}\nNet pay: {{net}}\n\nPay date: {{pay_date}}\n\nIf anything looks wrong, reply to this email.\n\n{{company_name}}"],
+    ];
 }
